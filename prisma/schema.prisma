@@ -1,0 +1,105 @@
+// نظام إدارة مكتب المحاماة - قاعدة البيانات
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // SQLite للتشغيل الفوري محلياً بدون إعداد.
+  // للانتقال إلى PostgreSQL لاحقاً: غيّر provider إلى "postgresql"
+  // وعدّل DATABASE_URL في .env إلى رابط اتصال Postgres (مثلاً من Supabase).
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PARTNER   // شريك
+  LAWYER    // محامي
+  SECRETARY // سكرتير
+}
+
+enum CaseStatus {
+  OPEN      // مفتوحة
+  ACTIVE    // جارية
+  ON_HOLD   // متوقفة
+  CLOSED    // منتهية
+}
+
+enum ClientType {
+  INDIVIDUAL // فرد
+  COMPANY    // شركة
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(LAWYER)
+  phone        String?
+  createdAt    DateTime @default(now())
+
+  assignedCases Case[]        @relation("AssignedLawyer")
+  caseUpdates   CaseUpdate[]
+}
+
+model Client {
+  id        String     @id @default(cuid())
+  name      String
+  type      ClientType @default(INDIVIDUAL)
+  idNumber  String?    // رقم الهوية / السجل التجاري
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  cases Case[]
+}
+
+model Case {
+  id             String     @id @default(cuid())
+  caseNumber     String     @unique // رقم القضية
+  title          String     // موضوع القضية
+  caseType       String     // نوع القضية (تجارية/عمالية/عقارية...)
+  status         CaseStatus @default(OPEN)
+  court          String?    // المحكمة المختصة
+  opposingParty  String?    // الطرف الآخر
+  claimValue     Float?     // قيمة المطالبة
+  description    String?
+  openedAt       DateTime   @default(now())
+  closedAt       DateTime?
+
+  clientId   String
+  client     Client @relation(fields: [clientId], references: [id])
+
+  lawyerId   String?
+  lawyer     User?   @relation("AssignedLawyer", fields: [lawyerId], references: [id])
+
+  hearings    Hearing[]
+  updates     CaseUpdate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Hearing {
+  id          String   @id @default(cuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  date        DateTime // موعد الجلسة
+  court       String?
+  roundNumber Int?     // رقم الجولة/الجلسة
+  notes       String?
+  outcome     String?  // نتيجة الجلسة (بعد انعقادها)
+  createdAt   DateTime @default(now())
+}
+
+model CaseUpdate {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  note      String
+  createdAt DateTime @default(now())
+}
