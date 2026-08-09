@@ -1,18 +1,23 @@
 // نظام إدارة مكتب المحاماة - قاعدة البيانات
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
+  // PostgreSQL - مناسب للنشر على Vercel + Supabase
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["public"]
 }
 
 enum Role {
   PARTNER   // شريك
   LAWYER    // محامي
   SECRETARY // سكرتير
+
+  @@schema("public")
 }
 
 enum CaseStatus {
@@ -20,11 +25,15 @@ enum CaseStatus {
   ACTIVE    // جارية
   ON_HOLD   // متوقفة
   CLOSED    // منتهية
+
+  @@schema("public")
 }
 
 enum ClientType {
   INDIVIDUAL // فرد
   COMPANY    // شركة
+
+  @@schema("public")
 }
 
 model User {
@@ -38,6 +47,8 @@ model User {
 
   assignedCases Case[]        @relation("AssignedLawyer")
   caseUpdates   CaseUpdate[]
+
+  @@schema("public")
 }
 
 model Client {
@@ -52,6 +63,8 @@ model Client {
   createdAt DateTime   @default(now())
 
   cases Case[]
+
+  @@schema("public")
 }
 
 model Case {
@@ -78,6 +91,8 @@ model Case {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@schema("public")
 }
 
 model Hearing {
@@ -90,6 +105,8 @@ model Hearing {
   notes       String?
   outcome     String?  // نتيجة الجلسة (بعد انعقادها)
   createdAt   DateTime @default(now())
+
+  @@schema("public")
 }
 
 model CaseUpdate {
@@ -100,4 +117,6 @@ model CaseUpdate {
   author    User     @relation(fields: [authorId], references: [id])
   note      String
   createdAt DateTime @default(now())
+
+  @@schema("public")
 }
