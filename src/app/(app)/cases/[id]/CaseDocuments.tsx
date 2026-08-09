@@ -28,7 +28,6 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -78,10 +77,7 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
         <div className="space-y-2 mb-4">
           {docs.length === 0 && <p className="text-sm text-gray-400">لا توجد مرفقات لهذه القضية.</p>}
           {docs.map((d) => (
-            <div
-              key={d.id}
-              className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2"
-            >
+            <div key={d.id} className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2">
               
                 href={d.fileUrl}
                 target="_blank"
@@ -93,10 +89,7 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
               </a>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-xs text-gray-400">{formatSize(d.fileSize)}</span>
-                <button
-                  onClick={() => handleDelete(d.id)}
-                  className="text-xs text-red-600 hover:underline"
-                >
+                <button onClick={() => handleDelete(d.id)} className="text-xs text-red-600 hover:underline">
                   حذف
                 </button>
               </div>
@@ -115,4 +108,3 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
     </div>
   );
 }
-
