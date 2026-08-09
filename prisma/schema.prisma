@@ -7,7 +7,7 @@ datasource db {
   // SQLite للتشغيل الفوري محلياً بدون إعداد.
   // للانتقال إلى PostgreSQL لاحقاً: غيّر provider إلى "postgresql"
   // وعدّل DATABASE_URL في .env إلى رابط اتصال Postgres (مثلاً من Supabase).
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
