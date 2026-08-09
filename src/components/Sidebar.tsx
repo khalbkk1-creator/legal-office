@@ -4,13 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 
-const links = [
-  { href: "/dashboard", label: "الرئيسية", icon: "🏠" },
-  { href: "/cases", label: "القضايا", icon: "⚖️" },
-  { href: "/clients", label: "العملاء", icon: "👥" },
-  { href: "/hearings", label: "الجلسات", icon: "📅" },
-];
-
 export default function Sidebar({
   userName,
   userRole,
@@ -19,6 +12,14 @@ export default function Sidebar({
   userRole: string;
 }) {
   const pathname = usePathname();
+
+  const links = [
+    { href: "/dashboard", label: "الرئيسية", icon: "🏠" },
+    { href: "/cases", label: "القضايا", icon: "⚖️" },
+    { href: "/clients", label: "العملاء", icon: "👥" },
+    { href: "/hearings", label: "الجلسات", icon: "📅" },
+    ...(userRole === "PARTNER" ? [{ href: "/users", label: "المستخدمون", icon: "🔑" }] : []),
+  ];
 
   const roleLabels: Record<string, string> = {
     PARTNER: "شريك",
@@ -75,3 +76,4 @@ export default function Sidebar({
     </aside>
   );
 }
+
