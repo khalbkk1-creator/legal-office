@@ -47,6 +47,7 @@ model User {
 
   assignedCases Case[]        @relation("AssignedLawyer")
   caseUpdates   CaseUpdate[]
+  uploadedDocuments CaseDocument[]
 
   @@schema("public")
 }
@@ -88,9 +89,24 @@ model Case {
 
   hearings    Hearing[]
   updates     CaseUpdate[]
+  documents   CaseDocument[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@schema("public")
+}
+
+model CaseDocument {
+  id           String   @id @default(cuid())
+  caseId       String
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  fileName     String
+  fileUrl      String
+  fileSize     Int?
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
 
   @@schema("public")
 }
@@ -120,3 +136,4 @@ model CaseUpdate {
 
   @@schema("public")
 }
+

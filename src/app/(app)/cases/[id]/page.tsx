@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import AddHearingForm from "./AddHearingForm";
 import AddUpdateForm from "./AddUpdateForm";
+import CaseDocuments from "./CaseDocuments";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   OPEN: { label: "مفتوحة", color: "bg-amber-50 text-amber-700" },
@@ -38,9 +39,14 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             رقم القضية: {item.caseNumber} · {item.caseType}
           </p>
         </div>
-        <Link href="/cases" className="text-sm text-primary-700 hover:underline">
-          ← رجوع للقضايا
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href={`/cases/${item.id}/edit`} className="text-sm text-primary-700 hover:underline">
+            ✏️ تعديل القضية
+          </Link>
+          <Link href="/cases" className="text-sm text-primary-700 hover:underline">
+            ← رجوع للقضايا
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -86,6 +92,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         <AddHearingForm caseId={item.id} />
       </div>
 
+      <CaseDocuments caseId={item.id} />
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-4">سجل المتابعة</h2>
         <div className="space-y-3 mb-5">
@@ -124,3 +132,4 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
