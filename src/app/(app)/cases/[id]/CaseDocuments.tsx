@@ -28,6 +28,7 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -74,27 +75,38 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
       {loading ? (
         <p className="text-sm text-gray-400">جاري التحميل...</p>
       ) : (
-        <div className="space-y-2 mb-4">
+        <div className="mb-4">
           {docs.length === 0 && <p className="text-sm text-gray-400">لا توجد مرفقات لهذه القضية.</p>}
-          {docs.map((d) => (
-            <div key={d.id} className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2">
-              <a
-                href={d.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-primary-700 hover:underline min-w-0"
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {docs.map((d) => (
+              <div
+                key={d.id}
+                className="relative flex flex-col items-center border border-gray-100 rounded-xl p-3 hover:border-primary-200 hover:bg-primary-50/30 transition"
               >
-                <span>[ملف]</span>
-                <span className="truncate">{d.fileName}</span>
-              </a>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-xs text-gray-400">{formatSize(d.fileSize)}</span>
-                <button onClick={() => handleDelete(d.id)} className="text-xs text-red-600 hover:underline">
-                  حذف
+                <button
+                  onClick={() => handleDelete(d.id)}
+                  className="absolute top-1.5 left-1.5 text-gray-300 hover:text-red-600 text-xs w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-50 transition"
+                  title="حذف"
+                >
+                  ✕
                 </button>
+                
+                  href={d.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-2 w-full"
+                >
+                  <p className="text-xs font-medium text-ink text-center break-words line-clamp-2 w-full px-1">
+                    {d.fileName}
+                  </p>
+                  <div className="w-12 h-12 rounded-lg bg-primary-50 flex items-center justify-center text-primary-700 text-xl">
+                    📄
+                  </div>
+                  <span className="text-[11px] text-gray-400">{formatSize(d.fileSize)}</span>
+                </a>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 

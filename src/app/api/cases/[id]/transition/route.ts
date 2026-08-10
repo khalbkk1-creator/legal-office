@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 // APPROVE: تحت الاعتماد -> جارية (الشريك فقط)
 // CLOSE: جارية -> مغلقة
 // HOLD: أي حالة (غير معلقة) -> معلقة (تُحفظ الحالة السابقة)
-// RESTORE: معلقة -> الحالة السابقة قبل التعليق
+// RESTORE: معلقة أو مغلقة -> الحالة السابقة
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
     const updated = await prisma.case.update({
       where: { id: params.id },
-      data: { status: "CLOSED", closedAt: new Date() },
+      data: { status: "CLOSED", previousStatus: item.status, closedAt: new Date() },
     });
     return NextResponse.json(updated);
   }
@@ -69,12 +69,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   if (action === "RESTORE") {
-    if (item.status !== "ON_HOLD") {
-      return NextResponse.json({ error: "هذا الإجراء متاح فقط للقضايا المعلّقة" }, { status: 400 });
+    if (item.status !== "ON_HOLD" && item.status !== "CLOSED") {
+      return NextResponse.json({ error: "هذا الإجراء متاح فقط للقضايا المعلّقة أو المغلقة" }, { status: 400 });
     }
+    const restoredStatus = (item.previousStatus ?? "ACTIVE") as
+      | "UNDER_REVIEW"
+      | "UNDER_APPROVAL"
+      | "ACTIVE"
+      | "ON_HOLD"
+      | "CLOSED";
     const updated = await prisma.case.update({
       where: { id: params.id },
-      data: { status: (item.previousStatus ?? "UNDER_REVIEW") as any, previousStatus: null },
+      data: { status: restoredStatus, previousStatus: null, closedAt: null },
     });
     return NextResponse.json(updated);
   }
