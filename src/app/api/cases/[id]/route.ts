@@ -25,9 +25,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const body = await req.json();
+  const data = { ...body };
+  if ("appealDeadline" in data) {
+    data.appealDeadline = data.appealDeadline ? new Date(data.appealDeadline) : null;
+  }
+
   const updated = await prisma.case.update({
     where: { id: params.id },
-    data: body,
+    data,
   });
   return NextResponse.json(updated);
 }

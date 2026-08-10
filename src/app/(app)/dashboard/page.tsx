@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
 
 export default async function DashboardPage() {
-  const [underReviewCases, underApprovalCases, activeCases, totalClients, upcomingHearings] = await Promise.all([
+  const [underReviewCases, underApprovalCases, activeCases, totalClients, upcomingHearings, appealCases] = await Promise.all([
     prisma.case.count({ where: { status: "UNDER_REVIEW" } }),
     prisma.case.count({ where: { status: "UNDER_APPROVAL" } }),
     prisma.case.count({ where: { status: "ACTIVE" } }),
@@ -11,6 +12,11 @@ export default async function DashboardPage() {
       orderBy: { date: "asc" },
       take: 5,
       include: { case: { include: { client: true } } },
+    }),
+    prisma.case.findMany({
+      where: { appealDeadline: { not: null } },
+      orderBy: { appealDeadline: "asc" },
+      include: { client: true },
     }),
   ]);
 
@@ -68,6 +74,47 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 className="font-bold text-ink mb-4">تحذيرات مواعيد الاستئناف</h2>
+        {appealCases.length === 0 ? (
+          <p className="text-sm text-gray-400">لا توجد مواعيد استئناف مسجّلة.</p>
+        ) : (
+          <div className="space-y-3">
+            {appealCases.map((c) => {
+              const badge = appealBadge(c.appealDeadline as Date);
+              return (
+                <Link
+                  key={c.id}
+                  href={`/cases/${c.id}`}
+                  className="flex items-center justify-between border-b border-gray-50 last:border-0 pb-3 last:pb-0"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-ink">{c.title}</p>
+                    <p className="text-xs text-gray-400">
+                      {c.client.name} · {c.caseNumber}
+                    </p>
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-sm ${badge.className}`}>{badge.label}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(c.appealDeadline as Date).toLocaleDateString("ar-SA")}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+function appealBadge(deadline: Date) {
+  const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return { label: "انتهى الموعد", className: "font-bold text-red-600" };
+  if (days === 0) return { label: "اليوم آخر موعد", className: "font-bold text-red-600" };
+  if (days <= 7) return { label: `باقي ${days} يوم`, className: "font-bold text-red-600" };
+  if (days <= 14) return { label: `باقي ${days} يوم`, className: "font-bold text-amber-600" };
+  return { label: `باقي ${days} يوم`, className: "font-medium text-ink" };
 }

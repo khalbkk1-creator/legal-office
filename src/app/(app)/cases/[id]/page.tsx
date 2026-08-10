@@ -66,6 +66,14 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <Row label="المحكمة" value={item.court ?? "—"} />
           <Row label="الطرف الآخر" value={item.opposingParty ?? "—"} />
           <Row label="قيمة المطالبة" value={item.claimValue ? `${item.claimValue.toLocaleString()} ر.س` : "—"} />
+          {item.appealDeadline && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">آخر موعد للاستئناف</span>
+              <span className={appealBadge(item.appealDeadline).className}>
+                {new Date(item.appealDeadline).toLocaleDateString("ar-SA")} ({appealBadge(item.appealDeadline).label})
+              </span>
+            </div>
+          )}
         </InfoCard>
       </div>
 
@@ -122,6 +130,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       </div>
     </div>
   );
+}
+
+function appealBadge(deadline: Date | string) {
+  const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return { label: "انتهى الموعد", className: "font-medium text-red-600" };
+  if (days === 0) return { label: "اليوم آخر موعد", className: "font-medium text-red-600" };
+  if (days <= 7) return { label: `باقي ${days} يوم`, className: "font-medium text-red-600" };
+  if (days <= 14) return { label: `باقي ${days} يوم`, className: "font-medium text-amber-600" };
+  return { label: `باقي ${days} يوم`, className: "font-medium text-ink" };
 }
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {

@@ -75,13 +75,14 @@ model Case {
   title          String     // موضوع القضية
   caseType       String     // نوع القضية (تجارية/عمالية/عقارية...)
   status         CaseStatus @default(UNDER_REVIEW)
-  previousStatus String? // الحالة السابقة قبل التعليق، تُستخدم لاسترجاعها
+  previousStatus String? // الحالة السابقة قبل التعليق (نص عادي لتفادي تعارض ترحيل قاعدة البيانات)
   court          String?    // المحكمة المختصة
   opposingParty  String?    // الطرف الآخر
   claimValue     Float?     // قيمة المطالبة
   description    String?
   openedAt       DateTime   @default(now())
   closedAt       DateTime?
+  appealDeadline DateTime? // آخر موعد للاستئناف
 
   clientId   String
   client     Client @relation(fields: [clientId], references: [id])

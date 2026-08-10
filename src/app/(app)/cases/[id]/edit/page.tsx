@@ -27,6 +27,7 @@ export default function EditCasePage() {
     description: "",
     clientId: "",
     lawyerId: "",
+    appealDeadline: "",
   });
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function EditCasePage() {
         description: caseData.description ?? "",
         clientId: caseData.clientId ?? "",
         lawyerId: caseData.lawyerId ?? "",
+        appealDeadline: caseData.appealDeadline ? caseData.appealDeadline.slice(0, 10) : "",
       });
       setLoading(false);
     });
@@ -71,6 +73,7 @@ export default function EditCasePage() {
         court: form.court || null,
         opposingParty: form.opposingParty || null,
         description: form.description || null,
+        appealDeadline: form.appealDeadline || null,
       }),
     });
 
@@ -133,6 +136,17 @@ export default function EditCasePage() {
         </div>
 
         <Field label="قيمة المطالبة (ر.س)" type="number" value={form.claimValue} onChange={(v) => update("claimValue", v)} />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">آخر موعد للاستئناف</label>
+          <input
+            type="date"
+            value={form.appealDeadline}
+            onChange={(e) => update("appealDeadline", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-gray-400 mt-1">راح تظهر القضية كتحذير بالصفحة الرئيسية قبل هذا التاريخ.</p>
+        </div>
 
         <p className="text-xs text-gray-400">
           لتغيير حالة القضية (تحت الدراسة / تحت الاعتماد / جارية / معلقة / مغلقة) استخدم أزرار الإجراءات في صفحة القضية.

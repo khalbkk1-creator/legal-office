@@ -64,8 +64,8 @@ export default function CaseActions({
   if (status === "ON_HOLD") {
     buttons.push({ label: "استرجاع الحالة السابقة", action: "RESTORE", style: "bg-primary-700 hover:bg-primary-800 text-white" });
   }
-  if (status === "CLOSED") {
-    buttons.push({ label: "إعادة فتح القضية", action: "RESTORE", style: "bg-primary-700 hover:bg-primary-800 text-white" });
+  if (["UNDER_APPROVAL", "ACTIVE", "CLOSED"].includes(status)) {
+    buttons.push({ label: "إرجاع للمرحلة السابقة", action: "SEND_BACK", style: "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700" });
   }
 
   if (buttons.length === 0 && userRole !== "PARTNER") return null;

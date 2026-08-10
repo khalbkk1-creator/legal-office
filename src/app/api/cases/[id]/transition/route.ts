@@ -8,7 +8,14 @@ import { prisma } from "@/lib/prisma";
 // APPROVE: تحت الاعتماد -> جارية (الشريك فقط)
 // CLOSE: جارية -> مغلقة
 // HOLD: أي حالة (غير معلقة) -> معلقة (تُحفظ الحالة السابقة)
-// RESTORE: معلقة أو مغلقة -> الحالة السابقة
+// RESTORE: معلقة -> الحالة السابقة قبل التعليق
+// SEND_BACK: يرجع القضية مرحلة واحدة للخلف (متاح من أي مرحلة عدا "تحت الدراسة" و"معلقة")
+
+const PREVIOUS_STAGE: Record<string, string> = {
+  UNDER_APPROVAL: "UNDER_REVIEW",
+  ACTIVE: "UNDER_APPROVAL",
+  CLOSED: "ACTIVE",
+};
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -81,6 +88,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const updated = await prisma.case.update({
       where: { id: params.id },
       data: { status: restoredStatus, previousStatus: null, closedAt: null },
+    });
+    return NextResponse.json(updated);
+  }
+
+  if (action === "SEND_BACK") {
+    const prevStage = PREVIOUS_STAGE[item.status];
+    if (!prevStage) {
+      return NextResponse.json({ error: "لا يمكن إرجاع هذه القضية أكثر من ذلك" }, { status: 400 });
+    }
+    const updated = await prisma.case.update({
+      where: { id: params.id },
+      data: {
+        status: prevStage as "UNDER_REVIEW" | "UNDER_APPROVAL" | "ACTIVE",
+        previousStatus: null,
+        closedAt: null,
+      },
     });
     return NextResponse.json(updated);
   }
