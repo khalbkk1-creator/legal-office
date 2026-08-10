@@ -2,10 +2,11 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
-  OPEN: { label: "مفتوحة", color: "bg-amber-50 text-amber-700" },
+  UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
+  UNDER_APPROVAL: { label: "تحت الاعتماد", color: "bg-purple-50 text-purple-700" },
   ACTIVE: { label: "جارية", color: "bg-primary-50 text-primary-700" },
-  ON_HOLD: { label: "متوقفة", color: "bg-gray-100 text-gray-600" },
-  CLOSED: { label: "منتهية", color: "bg-red-50 text-red-600" },
+  ON_HOLD: { label: "معلقة", color: "bg-amber-50 text-amber-700" },
+  CLOSED: { label: "مغلقة", color: "bg-red-50 text-red-600" },
 };
 
 export default async function CasesPage() {

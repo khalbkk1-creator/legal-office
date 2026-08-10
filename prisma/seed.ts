@@ -83,7 +83,7 @@ async function main() {
       caseNumber: "C-2026-002",
       title: "نزاع عمالي - إنهاء عقد عمل",
       caseType: "عمالية",
-      status: CaseStatus.OPEN,
+      status: CaseStatus.UNDER_REVIEW,
       court: "المحكمة العمالية بالرياض",
       opposingParty: "شركة النجاح للتجارة",
       claimValue: 60000,

@@ -8,7 +8,7 @@ const caseSchema = z.object({
   caseNumber: z.string().min(1),
   title: z.string().min(1),
   caseType: z.string().min(1),
-  status: z.enum(["OPEN", "ACTIVE", "ON_HOLD", "CLOSED"]).default("OPEN"),
+  status: z.enum(["UNDER_REVIEW", "UNDER_APPROVAL", "ACTIVE", "ON_HOLD", "CLOSED"]).default("UNDER_REVIEW"),
   court: z.string().optional(),
   opposingParty: z.string().optional(),
   claimValue: z.number().optional(),

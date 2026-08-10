@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
-  const [openCases, activeCases, totalClients, upcomingHearings] = await Promise.all([
-    prisma.case.count({ where: { status: "OPEN" } }),
+  const [underReviewCases, underApprovalCases, activeCases, totalClients, upcomingHearings] = await Promise.all([
+    prisma.case.count({ where: { status: "UNDER_REVIEW" } }),
+    prisma.case.count({ where: { status: "UNDER_APPROVAL" } }),
     prisma.case.count({ where: { status: "ACTIVE" } }),
     prisma.client.count(),
     prisma.hearing.findMany({
@@ -14,9 +15,10 @@ export default async function DashboardPage() {
   ]);
 
   const stats = [
-    { label: "قضايا مفتوحة", value: openCases, color: "bg-amber-50 text-amber-700" },
+    { label: "تحت الدراسة", value: underReviewCases, color: "bg-blue-50 text-blue-700" },
+    { label: "تحت الاعتماد", value: underApprovalCases, color: "bg-purple-50 text-purple-700" },
     { label: "قضايا جارية", value: activeCases, color: "bg-primary-50 text-primary-700" },
-    { label: "إجمالي العملاء", value: totalClients, color: "bg-blue-50 text-blue-700" },
+    { label: "إجمالي العملاء", value: totalClients, color: "bg-gray-100 text-gray-700" },
   ];
 
   return (
@@ -26,7 +28,7 @@ export default async function DashboardPage() {
         <p className="text-gray-500 text-sm mt-1">نظرة عامة على نشاط المكتب</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <p className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium mb-3 ${s.color}`}>

@@ -36,6 +36,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
+  const role = (session.user as any).role;
+  if (role !== "PARTNER") {
+    return NextResponse.json({ error: "حذف القضايا متاح للشريك فقط" }, { status: 403 });
+  }
+
   await prisma.case.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

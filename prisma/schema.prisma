@@ -21,10 +21,11 @@ enum Role {
 }
 
 enum CaseStatus {
-  OPEN      // مفتوحة
-  ACTIVE    // جارية
-  ON_HOLD   // متوقفة
-  CLOSED    // منتهية
+  UNDER_REVIEW   // تحت الدراسة
+  UNDER_APPROVAL // تحت الاعتماد
+  ACTIVE         // جارية
+  ON_HOLD        // معلقة
+  CLOSED         // مغلقة
 
   @@schema("public")
 }
@@ -73,7 +74,8 @@ model Case {
   caseNumber     String     @unique // رقم القضية
   title          String     // موضوع القضية
   caseType       String     // نوع القضية (تجارية/عمالية/عقارية...)
-  status         CaseStatus @default(OPEN)
+  status         CaseStatus @default(UNDER_REVIEW)
+  previousStatus CaseStatus? // الحالة السابقة قبل التعليق، تُستخدم لاسترجاعها
   court          String?    // المحكمة المختصة
   opposingParty  String?    // الطرف الآخر
   claimValue     Float?     // قيمة المطالبة
@@ -136,4 +138,3 @@ model CaseUpdate {
 
   @@schema("public")
 }
-

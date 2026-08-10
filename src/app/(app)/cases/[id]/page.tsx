@@ -1,18 +1,25 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import AddHearingForm from "./AddHearingForm";
 import AddUpdateForm from "./AddUpdateForm";
 import CaseDocuments from "./CaseDocuments";
+import CaseActions from "./CaseActions";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
-  OPEN: { label: "مفتوحة", color: "bg-amber-50 text-amber-700" },
+  UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
+  UNDER_APPROVAL: { label: "تحت الاعتماد", color: "bg-purple-50 text-purple-700" },
   ACTIVE: { label: "جارية", color: "bg-primary-50 text-primary-700" },
-  ON_HOLD: { label: "متوقفة", color: "bg-gray-100 text-gray-600" },
-  CLOSED: { label: "منتهية", color: "bg-red-50 text-red-600" },
+  ON_HOLD: { label: "معلقة", color: "bg-amber-50 text-amber-700" },
+  CLOSED: { label: "مغلقة", color: "bg-red-50 text-red-600" },
 };
 
 export default async function CaseDetailPage({ params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  const userRole = (session?.user as any)?.role ?? "";
+
   const item = await prisma.case.findUnique({
     where: { id: params.id },
     include: {
@@ -61,6 +68,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <Row label="قيمة المطالبة" value={item.claimValue ? `${item.claimValue.toLocaleString()} ر.س` : "—"} />
         </InfoCard>
       </div>
+
+      <CaseActions caseId={item.id} status={item.status} userRole={userRole} />
 
       {item.description && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -132,4 +141,3 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
