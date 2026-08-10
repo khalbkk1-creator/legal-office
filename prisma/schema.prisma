@@ -126,15 +126,17 @@ model CaseDocument {
 }
 
 model Hearing {
-  id          String   @id @default(cuid())
-  caseId      String
-  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  date        DateTime // موعد الجلسة
-  court       String?
-  roundNumber Int?     // رقم الجولة/الجلسة
-  notes       String?
-  outcome     String?  // نتيجة الجلسة (بعد انعقادها)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  caseId       String
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  date         DateTime // موعد الجلسة
+  court        String?
+  roundNumber  Int?     // رقم الجولة/الجلسة
+  notes        String?
+  outcome      String?  // نتيجة الجلسة (بعد انعقادها)
+  reportUrl    String?  // رابط تقرير الجلسة المرفق
+  reportName   String?  // اسم ملف تقرير الجلسة
+  createdAt    DateTime @default(now())
 
   @@schema("public")
 }

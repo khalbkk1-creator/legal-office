@@ -7,6 +7,7 @@ import AddHearingForm from "./AddHearingForm";
 import AddUpdateForm from "./AddUpdateForm";
 import CaseDocuments from "./CaseDocuments";
 import CaseActions from "./CaseActions";
+import HearingReport from "./HearingReport";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -62,6 +63,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <Row label="الجوال" value={item.client.phone ?? "—"} />
         </InfoCard>
         <InfoCard title="بيانات القضية">
+          <Row label="نوع القضية" value={item.caseType} />
           <Row label="المحامي المسؤول" value={item.lawyer?.name ?? "غير معيّن"} />
           <Row label="المحكمة" value={item.court ?? "—"} />
           <Row label="الطرف الآخر" value={item.opposingParty ?? "—"} />
@@ -99,6 +101,13 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   {h.roundNumber ? `الجلسة رقم ${h.roundNumber}` : "جلسة"} — {h.court ?? item.court ?? "—"}
                 </p>
                 {h.notes && <p className="text-xs text-gray-500 mt-0.5">{h.notes}</p>}
+                <HearingReport
+                  caseId={item.id}
+                  hearingId={h.id}
+                  hearingDate={h.date.toISOString()}
+                  reportUrl={h.reportUrl}
+                  reportName={h.reportName}
+                />
               </div>
               <p className="text-sm text-primary-700 font-medium whitespace-nowrap">
                 {new Date(h.date).toLocaleDateString("ar-SA", { day: "numeric", month: "long", year: "numeric" })}
