@@ -91,6 +91,7 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
                   ✕
                 </button>
                 
+                <a
                   href={d.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
