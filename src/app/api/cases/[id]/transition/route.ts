@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
     const updated = await prisma.case.update({
       where: { id: params.id },
-      data: { status: item.previousStatus ?? "UNDER_REVIEW", previousStatus: null },
+      data: { status: (item.previousStatus ?? "UNDER_REVIEW") as any, previousStatus: null },
     });
     return NextResponse.json(updated);
   }
