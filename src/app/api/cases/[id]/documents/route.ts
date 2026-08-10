@@ -10,7 +10,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const documents = await prisma.caseDocument.findMany({
     where: { caseId: params.id },
-    include: { uploadedBy: { select: { name: true } } },
+    include: { uploadedBy: { select: { name: true } }, category: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(documents);
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
+  const categoryId = (formData.get("categoryId") as string | null) || null;
   if (!file) {
     return NextResponse.json({ error: "لم يتم إرفاق ملف" }, { status: 400 });
   }
@@ -55,9 +56,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       fileUrl: publicUrlData.publicUrl,
       fileSize: file.size,
       uploadedById: user.id,
+      categoryId: categoryId || undefined,
     },
+    include: { category: true },
   });
 
   return NextResponse.json(document, { status: 201 });
 }
-
