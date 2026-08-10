@@ -78,13 +78,13 @@ export default function CaseDocuments({ caseId }: { caseId: string }) {
           {docs.length === 0 && <p className="text-sm text-gray-400">لا توجد مرفقات لهذه القضية.</p>}
           {docs.map((d) => (
             <div key={d.id} className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2">
-              
+              <a
                 href={d.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-primary-700 hover:underline min-w-0"
               >
-                <span>📎</span>
+                <span>[ملف]</span>
                 <span className="truncate">{d.fileName}</span>
               </a>
               <div className="flex items-center gap-3 shrink-0">
