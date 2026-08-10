@@ -17,5 +17,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       notes: body.notes || undefined,
     },
   });
+
+  if (body.appealDeadline) {
+    await prisma.case.update({
+      where: { id: params.id },
+      data: { appealDeadline: new Date(body.appealDeadline) },
+    });
+  }
+
   return NextResponse.json(hearing, { status: 201 });
 }
