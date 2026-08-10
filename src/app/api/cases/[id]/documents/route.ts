@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const safeName = file.name.replace(/[^a-zA-Z0-9\u0600-\u06FF._-]/g, "_");
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `${params.id}/${Date.now()}-${safeName}`;
 
   const { error: uploadError } = await supabaseAdmin.storage
