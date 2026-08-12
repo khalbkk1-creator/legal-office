@@ -80,6 +80,30 @@ model Quotation {
   @@schema("public")
 }
 
+enum ConsultationStatus {
+  PENDING   // بانتظار المراجعة
+  CONFIRMED // تم التأكيد
+  DONE      // تمت الاستشارة
+  CANCELLED // ملغاة
+
+  @@schema("public")
+}
+
+model ConsultationRequest {
+  id             String             @id @default(cuid())
+  name           String
+  phone          String
+  email          String?
+  notes          String?
+  attachmentUrl  String?
+  attachmentName String?
+  requestedDate  DateTime // تاريخ ووقت الموعد المطلوب
+  status         ConsultationStatus @default(PENDING)
+  createdAt      DateTime           @default(now())
+
+  @@schema("public")
+}
+
 model OfficeSettings {
   id            String   @id @default(cuid())
   officeName    String?

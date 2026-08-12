@@ -10,6 +10,7 @@ export const config = {
     "/quotes/:path*",
     "/users/:path*",
     "/settings/:path*",
+    "/consultations/:path*",
     "/print/:path*",
   ],
 };
