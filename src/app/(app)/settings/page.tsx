@@ -6,6 +6,7 @@ type Settings = {
   id: string;
   officeName: string | null;
   logoUrl: string | null;
+  letterheadUrl: string | null;
   taxNumber: string | null;
   phone: string | null;
   address: string | null;
@@ -16,6 +17,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingLetterhead, setUploadingLetterhead] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -88,6 +90,28 @@ export default function SettingsPage() {
     setSettings(updated);
   }
 
+  async function handleLetterheadUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLetterhead(true);
+    setError("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/settings/letterhead", { method: "POST", body: formData });
+    setUploadingLetterhead(false);
+    e.target.value = "";
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "تعذر رفع ورق الشركة");
+      return;
+    }
+    const updated = await res.json();
+    setSettings(updated);
+  }
+
   if (loading) return <p className="text-gray-400 text-sm">جاري التحميل...</p>;
 
   return (
@@ -108,6 +132,27 @@ export default function SettingsPage() {
           <label className="text-sm text-primary-700 font-medium hover:underline cursor-pointer">
             {uploadingLogo ? "جاري الرفع..." : "رفع / تغيير الشعار"}
             <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="hidden" />
+          </label>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">ورق الشركة (خلفية كاملة للمستندات)</label>
+        <p className="text-xs text-gray-400 mb-3">
+          ارفع تصميم ورق الشركة الجاهز (بالهيدر والفوتر)، وراح يستخدم كخلفية تلقائية للمستندات المولّدة بصيغة PDF للطباعة.
+        </p>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-20 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+            {settings?.letterheadUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={settings.letterheadUrl} alt="ورق الشركة" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-gray-300 text-xs">فارغ</span>
+            )}
+          </div>
+          <label className="text-sm text-primary-700 font-medium hover:underline cursor-pointer">
+            {uploadingLetterhead ? "جاري الرفع..." : "رفع / تغيير ورق الشركة"}
+            <input type="file" accept="image/*" onChange={handleLetterheadUpload} disabled={uploadingLetterhead} className="hidden" />
           </label>
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const DOCUMENT_TYPES = [
   { value: "RESPONSE_MEMO", label: "مذكرة جوابية" },
@@ -18,6 +18,9 @@ export default function DocumentGenerator({ caseId }: { caseId: string }) {
   const [bodyText, setBodyText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const printFormRef = useRef<HTMLFormElement>(null);
+  const templateInputRef = useRef<HTMLInputElement>(null);
+  const bodyInputRef = useRef<HTMLInputElement>(null);
 
   async function handleGenerate() {
     setLoading(true);
@@ -86,13 +89,31 @@ export default function DocumentGenerator({ caseId }: { caseId: string }) {
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-        <button
-          onClick={handleGenerate}
-          disabled={loading}
-          className="bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-60"
-        >
-          {loading ? "جاري التوليد..." : "📄 توليد وتنزيل Word"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-60"
+          >
+            {loading ? "جاري التوليد..." : "📄 توليد وتنزيل Word"}
+          </button>
+
+          <form
+            ref={printFormRef}
+            action={`/api/cases/${caseId}/generate-document-html`}
+            method="POST"
+            target="_blank"
+          >
+            <input ref={templateInputRef} type="hidden" name="templateType" value={templateType} readOnly />
+            <input ref={bodyInputRef} type="hidden" name="bodyText" value={bodyText} readOnly />
+            <button
+              type="submit"
+              className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium"
+            >
+              🖨️ عرض / طباعة PDF
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

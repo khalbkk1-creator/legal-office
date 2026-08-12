@@ -81,13 +81,14 @@ model Quotation {
 }
 
 model OfficeSettings {
-  id         String   @id @default(cuid())
-  officeName String?
-  logoUrl    String?
-  taxNumber  String? // الرقم الضريبي
-  phone      String?
-  address    String?
-  updatedAt  DateTime @updatedAt
+  id            String   @id @default(cuid())
+  officeName    String?
+  logoUrl       String?
+  letterheadUrl String? // صورة ورق الشركة (خلفية كاملة للصفحة)
+  taxNumber     String? // الرقم الضريبي
+  phone         String?
+  address       String?
+  updatedAt     DateTime @updatedAt
 
   @@schema("public")
 }
