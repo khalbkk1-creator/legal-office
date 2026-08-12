@@ -8,6 +8,7 @@ import AddUpdateForm from "./AddUpdateForm";
 import CaseDocuments from "./CaseDocuments";
 import CaseActions from "./CaseActions";
 import HearingItem from "./HearingItem";
+import DocumentGenerator from "./DocumentGenerator";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -116,6 +117,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       </div>
 
       <CaseDocuments caseId={item.id} />
+
+      <DocumentGenerator caseId={item.id} />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-4">سجل المتابعة</h2>
