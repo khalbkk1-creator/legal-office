@@ -18,6 +18,7 @@ export default function Sidebar({
     { href: "/cases", label: "القضايا", icon: "⚖️" },
     { href: "/clients", label: "العملاء", icon: "👥" },
     { href: "/hearings", label: "الجلسات", icon: "📅" },
+    { href: "/sales", label: "المبيعات", icon: "💰" },
     ...(userRole === "PARTNER" ? [{ href: "/users", label: "المستخدمون", icon: "🔑" }] : []),
   ];
 
@@ -76,4 +77,3 @@ export default function Sidebar({
     </aside>
   );
 }
-

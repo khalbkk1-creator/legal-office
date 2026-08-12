@@ -37,6 +37,40 @@ enum ClientType {
   @@schema("public")
 }
 
+enum PaymentStatus {
+  PAID    // مدفوعة
+  UNPAID  // غير مدفوعة
+  PARTIAL // مدفوعة جزئياً
+
+  @@schema("public")
+}
+
+model Sale {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique // رقم الفاتورة
+  description   String        // وصف الخدمة
+  amount        Float         // المبلغ قبل الضريبة
+  applyVat      Boolean       @default(true)
+  vatAmount     Float         @default(0)
+  totalAmount   Float         // المبلغ الإجمالي (شامل الضريبة)
+  paidAmount    Float         @default(0)
+  paymentStatus PaymentStatus @default(UNPAID)
+  saleDate      DateTime      @default(now())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id])
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@schema("public")
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -49,6 +83,7 @@ model User {
   assignedCases Case[]        @relation("AssignedLawyer")
   caseUpdates   CaseUpdate[]
   uploadedDocuments CaseDocument[]
+  sales         Sale[]
 
   @@schema("public")
 }
@@ -65,6 +100,7 @@ model Client {
   createdAt DateTime   @default(now())
 
   cases Case[]
+  sales Sale[]
 
   @@schema("public")
 }
@@ -93,6 +129,7 @@ model Case {
   hearings    Hearing[]
   updates     CaseUpdate[]
   documents   CaseDocument[]
+  sales       Sale[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
