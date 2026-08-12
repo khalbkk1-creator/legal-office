@@ -19,6 +19,7 @@ export default function Sidebar({
     { href: "/clients", label: "العملاء", icon: "👥" },
     { href: "/hearings", label: "الجلسات", icon: "📅" },
     { href: "/sales", label: "المبيعات", icon: "💰" },
+    { href: "/quotes", label: "عروض الأسعار", icon: "📝" },
     ...(userRole === "PARTNER" ? [{ href: "/users", label: "المستخدمون", icon: "🔑" }] : []),
   ];
 

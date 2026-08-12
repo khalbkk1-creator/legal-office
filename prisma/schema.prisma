@@ -45,6 +45,41 @@ enum PaymentStatus {
   @@schema("public")
 }
 
+enum QuotationStatus {
+  PENDING  // بانتظار الرد
+  ACCEPTED // مقبول
+  REJECTED // مرفوض
+  EXPIRED  // منتهي الصلاحية
+
+  @@schema("public")
+}
+
+model Quotation {
+  id              String          @id @default(cuid())
+  quoteNumber     String          @unique // رقم عرض السعر
+  description     String
+  amount          Float
+  applyVat        Boolean         @default(true)
+  vatAmount       Float           @default(0)
+  totalAmount     Float
+  status          QuotationStatus @default(PENDING)
+  validUntil      DateTime?
+  convertedSaleId String? // إذا تحوّل لفاتورة فعلية
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id])
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@schema("public")
+}
+
 model Sale {
   id            String        @id @default(cuid())
   invoiceNumber String        @unique // رقم الفاتورة
@@ -84,6 +119,7 @@ model User {
   caseUpdates   CaseUpdate[]
   uploadedDocuments CaseDocument[]
   sales         Sale[]
+  quotations    Quotation[]
 
   @@schema("public")
 }
@@ -101,6 +137,7 @@ model Client {
 
   cases Case[]
   sales Sale[]
+  quotations Quotation[]
 
   @@schema("public")
 }
@@ -130,6 +167,7 @@ model Case {
   updates     CaseUpdate[]
   documents   CaseDocument[]
   sales       Sale[]
+  quotations  Quotation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
