@@ -21,6 +21,7 @@ export default function Sidebar({
     { href: "/sales", label: "المبيعات", icon: "💰" },
     { href: "/quotes", label: "عروض الأسعار", icon: "📝" },
     ...(userRole === "PARTNER" ? [{ href: "/users", label: "المستخدمون", icon: "🔑" }] : []),
+    ...(userRole === "PARTNER" ? [{ href: "/settings", label: "إعدادات المكتب", icon: "⚙️" }] : []),
   ];
 
   const roleLabels: Record<string, string> = {

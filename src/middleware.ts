@@ -9,6 +9,7 @@ export const config = {
     "/sales/:path*",
     "/quotes/:path*",
     "/users/:path*",
+    "/settings/:path*",
     "/print/:path*",
   ],
 };

@@ -1,0 +1,170 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Settings = {
+  id: string;
+  officeName: string | null;
+  logoUrl: string | null;
+  taxNumber: string | null;
+  phone: string | null;
+  address: string | null;
+};
+
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const [form, setForm] = useState({
+    officeName: "",
+    taxNumber: "",
+    phone: "",
+    address: "",
+  });
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        setSettings(data);
+        setForm({
+          officeName: data.officeName ?? "",
+          taxNumber: data.taxNumber ?? "",
+          phone: data.phone ?? "",
+          address: data.address ?? "",
+        });
+        setLoading(false);
+      });
+  }, []);
+
+  function update(field: string, value: string) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccess(false);
+
+    const res = await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    setSaving(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "تعذر حفظ الإعدادات");
+      return;
+    }
+    setSuccess(true);
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setError("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/settings/logo", { method: "POST", body: formData });
+    setUploadingLogo(false);
+    e.target.value = "";
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "تعذر رفع الشعار");
+      return;
+    }
+    const updated = await res.json();
+    setSettings(updated);
+  }
+
+  if (loading) return <p className="text-gray-400 text-sm">جاري التحميل...</p>;
+
+  return (
+    <div className="max-w-lg">
+      <h1 className="text-2xl font-bold text-ink mb-6">إعدادات المكتب</h1>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-3">شعار المكتب</label>
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+            {settings?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={settings.logoUrl} alt="شعار المكتب" className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-gray-300 text-xs">بدون شعار</span>
+            )}
+          </div>
+          <label className="text-sm text-primary-700 font-medium hover:underline cursor-pointer">
+            {uploadingLogo ? "جاري الرفع..." : "رفع / تغيير الشعار"}
+            <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="hidden" />
+          </label>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">اسم المكتب</label>
+          <input
+            value={form.officeName}
+            onChange={(e) => update("officeName", e.target.value)}
+            placeholder="مثال: مكتب المحاماة والاستشارات القانونية"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">الرقم الضريبي (إن وجد)</label>
+          <input
+            value={form.taxNumber}
+            onChange={(e) => update("taxNumber", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">رقم الجوال / الهاتف</label>
+          <input
+            value={form.phone}
+            onChange={(e) => update("phone", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
+          <input
+            value={form.address}
+            onChange={(e) => update("address", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {success && <p className="text-sm text-primary-700 bg-primary-50 rounded-lg px-3 py-2">تم حفظ الإعدادات بنجاح</p>}
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-60"
+        >
+          {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+        </button>
+      </form>
+
+      <p className="text-xs text-gray-400 mt-3">
+        هذه البيانات تظهر تلقائياً بأعلى كل فاتورة وعرض سعر عند الطباعة.
+      </p>
+    </div>
+  );
+}

@@ -3,10 +3,13 @@ import { prisma } from "@/lib/prisma";
 import PrintButton from "../../PrintButton";
 
 export default async function PrintSalePage({ params }: { params: { id: string } }) {
-  const sale = await prisma.sale.findUnique({
-    where: { id: params.id },
-    include: { client: true, case: true },
-  });
+  const [sale, settings] = await Promise.all([
+    prisma.sale.findUnique({
+      where: { id: params.id },
+      include: { client: true, case: true },
+    }),
+    prisma.officeSettings.findFirst(),
+  ]);
 
   if (!sale) notFound();
 
@@ -14,6 +17,22 @@ export default async function PrintSalePage({ params }: { params: { id: string }
     <div className="min-h-screen bg-gray-50 print:bg-white py-10 px-4" dir="rtl">
       <PrintButton />
       <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm print:shadow-none border border-gray-100 print:border-0 p-10">
+        {(settings?.officeName || settings?.logoUrl) && (
+          <div className="flex items-center gap-3 border-b border-gray-100 pb-6 mb-6">
+            {settings.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={settings.logoUrl} alt="" className="w-14 h-14 object-contain" />
+            )}
+            <div>
+              {settings.officeName && <p className="text-lg font-bold text-ink">{settings.officeName}</p>}
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                {settings.taxNumber && <span>الرقم الضريبي: {settings.taxNumber}</span>}
+                {settings.phone && <span>{settings.phone}</span>}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-start justify-between border-b border-gray-100 pb-6 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-ink">فاتورة</h1>

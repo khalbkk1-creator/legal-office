@@ -80,6 +80,18 @@ model Quotation {
   @@schema("public")
 }
 
+model OfficeSettings {
+  id         String   @id @default(cuid())
+  officeName String?
+  logoUrl    String?
+  taxNumber  String? // الرقم الضريبي
+  phone      String?
+  address    String?
+  updatedAt  DateTime @updatedAt
+
+  @@schema("public")
+}
+
 model Sale {
   id            String        @id @default(cuid())
   invoiceNumber String        @unique // رقم الفاتورة
