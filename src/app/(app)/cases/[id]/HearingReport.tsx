@@ -18,6 +18,7 @@ export default function HearingReport({
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const isPast = new Date(hearingDate).getTime() < Date.now();
@@ -48,16 +49,33 @@ export default function HearingReport({
     router.refresh();
   }
 
+  async function handleDelete() {
+    if (!confirm("متأكد تبي تحذف تقرير الجلسة؟")) return;
+    setDeleting(true);
+    await fetch(`/api/cases/${caseId}/hearings/${hearingId}/report`, { method: "DELETE" });
+    setDeleting(false);
+    router.refresh();
+  }
+
   if (reportUrl) {
     return (
-      <a
-        href={reportUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs text-primary-700 hover:underline flex items-center gap-1 mt-1"
-      >
-        📄 {reportName || "تقرير الجلسة"}
-      </a>
+      <div className="flex items-center gap-2 mt-1">
+        <a
+          href={reportUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary-700 hover:underline flex items-center gap-1"
+        >
+          📄 {reportName || "تقرير الجلسة"}
+        </a>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-xs text-red-600 hover:underline disabled:opacity-60"
+        >
+          {deleting ? "جاري الحذف..." : "حذف"}
+        </button>
+      </div>
     );
   }
 

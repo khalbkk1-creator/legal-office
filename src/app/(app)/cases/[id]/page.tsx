@@ -7,7 +7,7 @@ import AddHearingForm from "./AddHearingForm";
 import AddUpdateForm from "./AddUpdateForm";
 import CaseDocuments from "./CaseDocuments";
 import CaseActions from "./CaseActions";
-import HearingReport from "./HearingReport";
+import HearingItem from "./HearingItem";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -95,24 +95,21 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             <p className="text-sm text-gray-400">لا توجد جلسات مسجّلة لهذه القضية.</p>
           )}
           {item.hearings.map((h) => (
-            <div key={h.id} className="flex items-center justify-between border-b border-gray-50 last:border-0 pb-3 last:pb-0">
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  {h.roundNumber ? `الجلسة رقم ${h.roundNumber}` : "جلسة"} — {h.court ?? item.court ?? "—"}
-                </p>
-                {h.notes && <p className="text-xs text-gray-500 mt-0.5">{h.notes}</p>}
-                <HearingReport
-                  caseId={item.id}
-                  hearingId={h.id}
-                  hearingDate={h.date.toISOString()}
-                  reportUrl={h.reportUrl}
-                  reportName={h.reportName}
-                />
-              </div>
-              <p className="text-sm text-primary-700 font-medium whitespace-nowrap">
-                {new Date(h.date).toLocaleDateString("ar-SA", { day: "numeric", month: "long", year: "numeric" })}
-              </p>
-            </div>
+            <HearingItem
+              key={h.id}
+              caseId={item.id}
+              defaultCourt={item.court}
+              hearing={{
+                id: h.id,
+                date: h.date.toISOString(),
+                court: h.court,
+                roundNumber: h.roundNumber,
+                notes: h.notes,
+                outcome: h.outcome,
+                reportUrl: h.reportUrl,
+                reportName: h.reportName,
+              }}
+            />
           ))}
         </div>
         <AddHearingForm caseId={item.id} />

@@ -44,3 +44,27 @@ export async function POST(
 
   return NextResponse.json(hearing);
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string; hearingId: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const hearing = await prisma.hearing.findUnique({ where: { id: params.hearingId } });
+  if (hearing?.reportUrl) {
+    const marker = `/${DOCUMENTS_BUCKET}/`;
+    const idx = hearing.reportUrl.indexOf(marker);
+    if (idx !== -1) {
+      const storagePath = hearing.reportUrl.slice(idx + marker.length);
+      await supabaseAdmin.storage.from(DOCUMENTS_BUCKET).remove([storagePath]);
+    }
+  }
+
+  const updated = await prisma.hearing.update({
+    where: { id: params.hearingId },
+    data: { reportUrl: null, reportName: null },
+  });
+  return NextResponse.json(updated);
+}
