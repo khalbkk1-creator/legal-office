@@ -65,7 +65,15 @@ export default async function QuotesPage() {
                   </span>
                 </td>
                 <td className="px-5 py-3">
-                  <QuoteActions quoteId={q.id} status={q.status} converted={!!q.convertedSaleId} />
+                  <div className="flex items-center gap-3">
+                    <QuoteActions quoteId={q.id} status={q.status} converted={!!q.convertedSaleId} />
+                    <Link href={`/quotes/${q.id}/edit`} className="text-xs text-primary-700 hover:underline">
+                      تعديل
+                    </Link>
+                    <Link href={`/print/quotes/${q.id}`} target="_blank" className="text-xs text-gray-500 hover:underline">
+                      طباعة
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

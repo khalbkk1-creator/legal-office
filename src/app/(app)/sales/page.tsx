@@ -108,7 +108,15 @@ export default async function SalesPage() {
                   </span>
                 </td>
                 <td className="px-5 py-3">
-                  {s.paymentStatus !== "PAID" && <MarkPaidButton saleId={s.id} totalAmount={s.totalAmount} />}
+                  <div className="flex items-center gap-3">
+                    {s.paymentStatus !== "PAID" && <MarkPaidButton saleId={s.id} totalAmount={s.totalAmount} />}
+                    <Link href={`/sales/${s.id}/edit`} className="text-xs text-primary-700 hover:underline">
+                      تعديل
+                    </Link>
+                    <Link href={`/print/sales/${s.id}`} target="_blank" className="text-xs text-gray-500 hover:underline">
+                      طباعة
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
