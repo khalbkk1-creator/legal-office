@@ -146,6 +146,7 @@ model Client {
   email     String?
   address   String?
   notes     String?
+  accessToken String? @unique // رمز رابط بوابة العميل
   createdAt DateTime   @default(now())
 
   cases Case[]

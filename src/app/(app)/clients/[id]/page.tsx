@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import PortalLinkGenerator from "./PortalLinkGenerator";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -37,6 +38,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         <Row label="البريد الإلكتروني" value={client.email ?? "—"} />
         <Row label="العنوان" value={client.address ?? "—"} />
       </div>
+
+      <PortalLinkGenerator clientId={client.id} existingToken={client.accessToken} />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-4">قضايا العميل ({client.cases.length})</h2>
