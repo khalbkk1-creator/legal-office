@@ -39,19 +39,23 @@ export default function QuoteActions({
   }
 
   if (converted) {
-    return <span className="text-xs text-gray-400">تم التحويل</span>;
+    return <span className="text-xs text-gray-400">تم التحويل ✓</span>;
   }
-
-  if (status !== "PENDING") return null;
 
   return (
     <div className="flex items-center gap-3">
-      <button onClick={convert} disabled={loading} className="text-xs text-primary-700 hover:underline disabled:opacity-60">
-        تحويل لفاتورة
+      <button
+        onClick={convert}
+        disabled={loading}
+        className="text-xs bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-3 py-1.5 font-medium disabled:opacity-60 whitespace-nowrap"
+      >
+        {loading ? "..." : "← تحويل لفاتورة"}
       </button>
-      <button onClick={reject} disabled={loading} className="text-xs text-red-600 hover:underline disabled:opacity-60">
-        رفض
-      </button>
+      {status === "PENDING" && (
+        <button onClick={reject} disabled={loading} className="text-xs text-red-600 hover:underline disabled:opacity-60">
+          رفض
+        </button>
+      )}
     </div>
   );
 }

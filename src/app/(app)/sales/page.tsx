@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import MarkPaidButton from "./MarkPaidButton";
+import BillingTabs from "@/components/BillingTabs";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PAID: { label: "مدفوعة", color: "bg-primary-50 text-primary-700" },
@@ -46,6 +47,8 @@ export default async function SalesPage() {
           + فاتورة جديدة
         </Link>
       </div>
+
+      <BillingTabs active="sales" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

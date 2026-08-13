@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import QuoteActions from "./QuoteActions";
+import BillingTabs from "@/components/BillingTabs";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: "بانتظار الرد", color: "bg-amber-50 text-amber-700" },
@@ -29,6 +30,8 @@ export default async function QuotesPage() {
           + عرض سعر جديد
         </Link>
       </div>
+
+      <BillingTabs active="quotes" />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
