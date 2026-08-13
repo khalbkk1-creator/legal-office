@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import QuoteResponse from "./QuoteResponse";
 import PortalUpload from "./PortalUpload";
 import ServiceRequestUpload from "./ServiceRequestUpload";
+import PortalMessages from "./PortalMessages";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -30,7 +31,11 @@ export default async function ClientPortalPage({ params }: { params: { token: st
     where: { accessToken: params.token },
     include: {
       cases: {
-        include: { hearings: { orderBy: { date: "desc" }, take: 5 }, documents: { include: { category: true } } },
+        include: {
+          hearings: { orderBy: { date: "desc" }, take: 5 },
+          documents: { include: { category: true } },
+          messages: { orderBy: { createdAt: "asc" } },
+        },
         orderBy: { createdAt: "desc" },
       },
       sales: { orderBy: { saleDate: "desc" } },
@@ -90,10 +95,22 @@ export default async function ClientPortalPage({ params }: { params: { token: st
                   <div className="mb-3">
                     <p className="text-xs font-medium text-gray-500 mb-1">آخر الجلسات</p>
                     {c.hearings.map((h) => (
-                      <p key={h.id} className="text-xs text-gray-600">
-                        {new Date(h.date).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })}
-                        {h.court ? ` — ${h.court}` : ""}
-                      </p>
+                      <div key={h.id} className="mb-1">
+                        <p className="text-xs text-gray-600">
+                          {new Date(h.date).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })}
+                          {h.court ? ` — ${h.court}` : ""}
+                        </p>
+                        {h.reportUrl && (
+                          <a
+                            href={h.reportUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary-700 hover:underline"
+                          >
+                            📄 {h.reportName || "تقرير الجلسة"}
+                          </a>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -117,6 +134,16 @@ export default async function ClientPortalPage({ params }: { params: { token: st
                   </div>
                 )}
                 <PortalUpload token={params.token} caseId={c.id} />
+                <PortalMessages
+                  token={params.token}
+                  caseId={c.id}
+                  messages={c.messages.map((m) => ({
+                    id: m.id,
+                    fromClient: m.fromClient,
+                    message: m.message,
+                    createdAt: m.createdAt.toISOString(),
+                  }))}
+                />
               </div>
             ))}
             {client.cases.length === 0 && (

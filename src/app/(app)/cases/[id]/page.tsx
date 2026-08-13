@@ -10,6 +10,7 @@ import CaseActions from "./CaseActions";
 import HearingItem from "./HearingItem";
 import DocumentGenerator from "./DocumentGenerator";
 import Timeline, { TimelineEvent } from "@/components/Timeline";
+import CaseMessages from "./CaseMessages";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -33,6 +34,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       documents: true,
       sales: true,
       quotations: true,
+      messages: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -77,6 +79,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       title: "ملاحظة متابعة",
       description: `${u.note} — ${u.author.name}`,
       color: "bg-gray-100 text-gray-600",
+    });
+  }
+
+  for (const m of item.messages) {
+    events.push({
+      date: m.createdAt,
+      icon: m.fromClient ? "💬" : "↩️",
+      title: m.fromClient ? "رسالة من العميل" : "رد المحامي",
+      description: m.message,
+      color: m.fromClient ? "bg-blue-50 text-blue-700" : "bg-primary-50 text-primary-700",
     });
   }
 
@@ -185,6 +197,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       <CaseDocuments caseId={item.id} />
 
       <DocumentGenerator caseId={item.id} />
+
+      <CaseMessages
+        caseId={item.id}
+        messages={item.messages.map((m) => ({
+          id: m.id,
+          fromClient: m.fromClient,
+          message: m.message,
+          createdAt: m.createdAt.toISOString(),
+        }))}
+      />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-4">سجل المتابعة</h2>

@@ -33,6 +33,7 @@ export async function GET() {
     expiredQuotes,
     hearingsMissingReports,
     unassignedCases,
+    allCaseMessages,
   ] = await Promise.all([
     prisma.serviceRequest.findMany({ where: { status: "NEW" }, include: { client: true } }),
     prisma.serviceRequest.findMany({ where: { status: "DOCS_SUBMITTED" }, include: { client: true } }),
@@ -68,6 +69,10 @@ export async function GET() {
     prisma.case.findMany({
       where: { lawyerId: null, status: { not: "CLOSED" } },
       include: { client: true },
+    }),
+    prisma.caseMessage.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { case: { include: { client: true } } },
     }),
   ]);
 
@@ -205,6 +210,24 @@ export async function GET() {
       urgency: "medium",
       date: c.createdAt.toISOString(),
     });
+  }
+
+  const latestMessageByCase = new Map<string, (typeof allCaseMessages)[number]>();
+  for (const m of allCaseMessages) {
+    if (!latestMessageByCase.has(m.caseId)) latestMessageByCase.set(m.caseId, m);
+  }
+  for (const m of latestMessageByCase.values()) {
+    if (m.fromClient) {
+      notifications.push({
+        id: `msg-${m.id}`,
+        icon: "💬",
+        title: `رسالة من ${m.case.client.name} بانتظار الرد`,
+        description: m.message.slice(0, 60),
+        href: `/cases/${m.caseId}`,
+        urgency: "high",
+        date: m.createdAt.toISOString(),
+      });
+    }
   }
 
   const order = { high: 0, medium: 1, low: 2 };

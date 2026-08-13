@@ -187,6 +187,17 @@ model ServiceRequestDocument {
   @@schema("public")
 }
 
+model CaseMessage {
+  id         String   @id @default(cuid())
+  caseId     String
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  fromClient Boolean  @default(true) // true = من العميل، false = رد المحامي
+  message    String
+  createdAt  DateTime @default(now())
+
+  @@schema("public")
+}
+
 model OfficeSettings {
   id            String   @id @default(cuid())
   officeName    String?
@@ -292,6 +303,7 @@ model Case {
   sales       Sale[]
   quotations  Quotation[]
   expenses    Expense[]
+  messages    CaseMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
