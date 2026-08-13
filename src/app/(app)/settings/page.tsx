@@ -26,6 +26,7 @@ export default function SettingsPage() {
     taxNumber: "",
     phone: "",
     address: "",
+    defaultHourlyRate: "",
   });
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function SettingsPage() {
           taxNumber: data.taxNumber ?? "",
           phone: data.phone ?? "",
           address: data.address ?? "",
+          defaultHourlyRate: data.defaultHourlyRate?.toString() ?? "",
         });
         setLoading(false);
       });
@@ -193,6 +195,19 @@ export default function SettingsPage() {
             onChange={(e) => update("address", e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">سعر الساعة الافتراضي (ر.س)</label>
+          <input
+            type="number"
+            min="0"
+            value={form.defaultHourlyRate}
+            onChange={(e) => update("defaultHourlyRate", e.target.value)}
+            placeholder="مثال: 300"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-gray-400 mt-1">يُستخدم كقيمة مبدئية عند تسجيل الساعات القابلة للفوترة.</p>
         </div>
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}

@@ -11,6 +11,7 @@ import HearingItem from "./HearingItem";
 import DocumentGenerator from "./DocumentGenerator";
 import Timeline, { TimelineEvent } from "@/components/Timeline";
 import CaseMessages from "./CaseMessages";
+import TimeEntries from "./TimeEntries";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -35,10 +36,13 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       sales: true,
       quotations: true,
       messages: { orderBy: { createdAt: "asc" } },
+      timeEntries: { include: { lawyer: true }, orderBy: { entryDate: "desc" } },
     },
   });
 
   if (!item) notFound();
+
+  const settings = await prisma.officeSettings.findFirst();
 
   const events: TimelineEvent[] = [];
 
@@ -205,6 +209,20 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           fromClient: m.fromClient,
           message: m.message,
           createdAt: m.createdAt.toISOString(),
+        }))}
+      />
+
+      <TimeEntries
+        caseId={item.id}
+        defaultRate={settings?.defaultHourlyRate ?? 0}
+        entries={item.timeEntries.map((e) => ({
+          id: e.id,
+          description: e.description,
+          minutes: e.minutes,
+          hourlyRate: e.hourlyRate,
+          billed: e.billed,
+          entryDate: e.entryDate.toISOString(),
+          lawyer: { name: e.lawyer.name },
         }))}
       />
 

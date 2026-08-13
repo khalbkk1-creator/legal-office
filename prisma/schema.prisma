@@ -198,6 +198,24 @@ model CaseMessage {
   @@schema("public")
 }
 
+model TimeEntry {
+  id          String   @id @default(cuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  lawyerId    String
+  lawyer      User     @relation(fields: [lawyerId], references: [id])
+  description String
+  minutes     Int      // مدة العمل بالدقائق
+  hourlyRate  Float    // السعر بالساعة وقت التسجيل
+  billed      Boolean  @default(false)
+  saleId      String?
+  sale        Sale?    @relation(fields: [saleId], references: [id])
+  entryDate   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@schema("public")
+}
+
 model OfficeSettings {
   id            String   @id @default(cuid())
   officeName    String?
@@ -206,6 +224,7 @@ model OfficeSettings {
   taxNumber     String? // الرقم الضريبي
   phone         String?
   address       String?
+  defaultHourlyRate Float? // سعر الساعة الافتراضي
   updatedAt     DateTime @updatedAt
 
   @@schema("public")
@@ -233,6 +252,7 @@ model Sale {
   createdBy   User?   @relation(fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
+  timeEntries TimeEntry[]
 
   @@schema("public")
 }
@@ -252,6 +272,7 @@ model User {
   sales         Sale[]
   quotations    Quotation[]
   expenses      Expense[]
+  timeEntries   TimeEntry[]
 
   @@schema("public")
 }
@@ -304,6 +325,7 @@ model Case {
   quotations  Quotation[]
   expenses    Expense[]
   messages    CaseMessage[]
+  timeEntries TimeEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
