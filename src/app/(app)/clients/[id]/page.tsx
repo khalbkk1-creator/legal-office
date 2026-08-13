@@ -2,6 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import PortalLinkGenerator from "./PortalLinkGenerator";
+import Timeline, { TimelineEvent } from "@/components/Timeline";
+
+const requestTypeLabels: Record<string, string> = { CASE: "قضية", CONSULTATION: "استشارة" };
+const paymentLabels: Record<string, string> = { PAID: "مدفوعة", UNPAID: "غير مدفوعة", PARTIAL: "مدفوعة جزئياً" };
+const quoteStatusLabels: Record<string, string> = { PENDING: "بانتظار الرد", ACCEPTED: "مقبول", REJECTED: "مرفوض", EXPIRED: "منتهي" };
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -14,10 +19,63 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const client = await prisma.client.findUnique({
     where: { id: params.id },
-    include: { cases: { include: { lawyer: true }, orderBy: { createdAt: "desc" } } },
+    include: {
+      cases: { include: { lawyer: true }, orderBy: { createdAt: "desc" } },
+      serviceRequests: true,
+      quotations: true,
+      sales: true,
+    },
   });
 
   if (!client) notFound();
+
+  const events: TimelineEvent[] = [];
+
+  events.push({ date: client.createdAt, icon: "👤", title: "انضم كعميل", color: "bg-gray-100 text-gray-600" });
+
+  for (const r of client.serviceRequests) {
+    events.push({
+      date: r.createdAt,
+      icon: "📋",
+      title: `طلب خدمة جديد — ${requestTypeLabels[r.requestType]}`,
+      description: r.notes || undefined,
+      href: `/service-requests/${r.id}`,
+      color: "bg-blue-50 text-blue-700",
+    });
+  }
+
+  for (const q of client.quotations) {
+    events.push({
+      date: q.createdAt,
+      icon: "📝",
+      title: `عرض سعر ${q.quoteNumber} — ${q.totalAmount.toLocaleString()} ر.س`,
+      description: `الحالة: ${quoteStatusLabels[q.status]}`,
+      href: `/quotes`,
+      color: "bg-purple-50 text-purple-700",
+    });
+  }
+
+  for (const s of client.sales) {
+    events.push({
+      date: s.saleDate,
+      icon: "💰",
+      title: `فاتورة ${s.invoiceNumber} — ${s.totalAmount.toLocaleString()} ر.س`,
+      description: `الحالة: ${paymentLabels[s.paymentStatus]}`,
+      href: `/sales`,
+      color: "bg-primary-50 text-primary-700",
+    });
+  }
+
+  for (const c of client.cases) {
+    events.push({
+      date: c.createdAt,
+      icon: "📁",
+      title: `قضية جديدة — ${c.title}`,
+      description: c.caseNumber,
+      href: `/cases/${c.id}`,
+      color: "bg-amber-50 text-amber-700",
+    });
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -40,6 +98,11 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
       </div>
 
       <PortalLinkGenerator clientId={client.id} existingToken={client.accessToken} clientPhone={client.phone} />
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 className="font-bold text-ink mb-4">الخط الزمني</h2>
+        <Timeline events={events} />
+      </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-4">قضايا العميل ({client.cases.length})</h2>

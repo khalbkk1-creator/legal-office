@@ -9,6 +9,7 @@ import CaseDocuments from "./CaseDocuments";
 import CaseActions from "./CaseActions";
 import HearingItem from "./HearingItem";
 import DocumentGenerator from "./DocumentGenerator";
+import Timeline, { TimelineEvent } from "@/components/Timeline";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -29,10 +30,75 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       lawyer: true,
       hearings: { orderBy: { date: "asc" } },
       updates: { include: { author: true }, orderBy: { createdAt: "desc" } },
+      documents: true,
+      sales: true,
+      quotations: true,
     },
   });
 
   if (!item) notFound();
+
+  const events: TimelineEvent[] = [];
+
+  events.push({ date: item.createdAt, icon: "📁", title: "فُتحت القضية", description: item.caseNumber, color: "bg-gray-100 text-gray-600" });
+
+  for (const h of item.hearings) {
+    events.push({
+      date: h.date,
+      icon: "📅",
+      title: h.roundNumber ? `الجلسة رقم ${h.roundNumber}` : "جلسة",
+      description: h.court || undefined,
+      color: "bg-blue-50 text-blue-700",
+    });
+    if (h.reportUrl) {
+      events.push({
+        date: h.date,
+        icon: "📄",
+        title: "تقرير الجلسة",
+        description: h.reportName || undefined,
+        color: "bg-purple-50 text-purple-700",
+      });
+    }
+  }
+
+  for (const d of item.documents) {
+    events.push({
+      date: d.createdAt,
+      icon: "📎",
+      title: `مرفق: ${d.fileName}`,
+      color: "bg-amber-50 text-amber-700",
+    });
+  }
+
+  for (const u of item.updates) {
+    events.push({
+      date: u.createdAt,
+      icon: "📝",
+      title: "ملاحظة متابعة",
+      description: `${u.note} — ${u.author.name}`,
+      color: "bg-gray-100 text-gray-600",
+    });
+  }
+
+  for (const q of item.quotations) {
+    events.push({
+      date: q.createdAt,
+      icon: "📝",
+      title: `عرض سعر ${q.quoteNumber} — ${q.totalAmount.toLocaleString()} ر.س`,
+      href: "/quotes",
+      color: "bg-purple-50 text-purple-700",
+    });
+  }
+
+  for (const s of item.sales) {
+    events.push({
+      date: s.saleDate,
+      icon: "💰",
+      title: `فاتورة ${s.invoiceNumber} — ${s.totalAmount.toLocaleString()} ر.س`,
+      href: "/sales",
+      color: "bg-primary-50 text-primary-700",
+    });
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -136,6 +202,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           ))}
         </div>
         <AddUpdateForm caseId={item.id} />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 className="font-bold text-ink mb-4">الخط الزمني للقضية</h2>
+        <Timeline events={events} />
       </div>
     </div>
   );
