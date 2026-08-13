@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import RegisterLinkCopy from "./RegisterLinkCopy";
 
 export default async function ClientsPage() {
   const clients = await prisma.client.findMany({
@@ -21,6 +22,8 @@ export default async function ClientsPage() {
           + عميل جديد
         </Link>
       </div>
+
+      <RegisterLinkCopy />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {clients.map((c) => (
