@@ -20,6 +20,8 @@ export default function Sidebar({
     { href: "/hearings", label: "الجلسات", icon: "📅" },
     { href: "/consultations", label: "طلبات الاستشارة", icon: "📩" },
     { href: "/sales", label: "المبيعات", icon: "💰" },
+    { href: "/expenses", label: "المصاريف", icon: "💸" },
+    { href: "/finance", label: "اللوحة المالية", icon: "📊" },
     { href: "/quotes", label: "عروض الأسعار", icon: "📝" },
     ...(userRole === "PARTNER" ? [{ href: "/users", label: "المستخدمون", icon: "🔑" }] : []),
     ...(userRole === "PARTNER" ? [{ href: "/settings", label: "إعدادات المكتب", icon: "⚙️" }] : []),

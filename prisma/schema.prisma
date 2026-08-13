@@ -104,6 +104,35 @@ model ConsultationRequest {
   @@schema("public")
 }
 
+model ExpenseCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  expenses  Expense[]
+
+  @@schema("public")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  expenseDate DateTime @default(now())
+
+  categoryId String?
+  category   ExpenseCategory? @relation(fields: [categoryId], references: [id])
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id])
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@schema("public")
+}
+
 model OfficeSettings {
   id            String   @id @default(cuid())
   officeName    String?
@@ -157,6 +186,7 @@ model User {
   uploadedDocuments CaseDocument[]
   sales         Sale[]
   quotations    Quotation[]
+  expenses      Expense[]
 
   @@schema("public")
 }
@@ -206,6 +236,7 @@ model Case {
   documents   CaseDocument[]
   sales       Sale[]
   quotations  Quotation[]
+  expenses    Expense[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
