@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import MarkPaidButton from "../sales/MarkPaidButton";
-import QuoteActions from "../quotes/QuoteActions";
+import MarkPaidButton from "@/app/(app)/sales/MarkPaidButton";
+import QuoteActions from "@/app/(app)/quotes/QuoteActions";
 
 type Sale = {
   id: string;
