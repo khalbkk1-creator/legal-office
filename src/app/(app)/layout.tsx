@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 import NotificationBell from "@/components/NotificationBell";
+import GlobalSearch from "@/components/GlobalSearch";
 
 export default async function AppLayout({
   children,
@@ -18,7 +19,8 @@ export default async function AppLayout({
     <div className="flex min-h-screen">
       <Sidebar userName={user.name} userRole={user.role} />
       <main className="flex-1 p-8">
-        <div className="flex justify-end mb-4">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <GlobalSearch />
           <NotificationBell />
         </div>
         {children}
