@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
+import NotificationBell from "@/components/NotificationBell";
 
 export default async function AppLayout({
   children,
@@ -16,7 +17,12 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar userName={user.name} userRole={user.role} />
-      <main className="flex-1 p-8">{children}</main>
+      <main className="flex-1 p-8">
+        <div className="flex justify-end mb-4">
+          <NotificationBell />
+        </div>
+        {children}
+      </main>
     </div>
   );
 }
