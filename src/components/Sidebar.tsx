@@ -7,9 +7,13 @@ import { signOut } from "next-auth/react";
 export default function Sidebar({
   userName,
   userRole,
+  open,
+  onClose,
 }: {
   userName: string;
   userRole: string;
+  open: boolean;
+  onClose: () => void;
 }) {
   const pathname = usePathname();
 
@@ -34,8 +38,12 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-64 bg-white border-l border-gray-200 h-screen sticky top-0 flex flex-col">
-      <div className="p-5 border-b border-gray-100">
+    <aside
+      className={`fixed md:sticky top-0 right-0 z-40 w-64 bg-white border-l border-gray-200 h-screen flex flex-col transform transition-transform duration-200 ease-in-out ${
+        open ? "translate-x-0" : "translate-x-full md:translate-x-0"
+      }`}
+    >
+      <div className="p-5 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-lg bg-primary-700 flex items-center justify-center text-white font-bold">
             م
@@ -45,9 +53,12 @@ export default function Sidebar({
             <p className="text-xs text-gray-400">نظام الإدارة</p>
           </div>
         </div>
+        <button onClick={onClose} className="md:hidden text-gray-400 hover:text-gray-600 text-xl leading-none">
+          ✕
+        </button>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {links.map((link) => {
           const billingPaths = link.href === "/sales" ? ["/sales", "/quotes"] : [link.href];
           const active = billingPaths.some((p) => pathname === p || pathname?.startsWith(p + "/"));
@@ -55,6 +66,7 @@ export default function Sidebar({
             <Link
               key={link.href}
               href={link.href}
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
                 active
                   ? "bg-primary-700 text-white"

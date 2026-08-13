@@ -36,7 +36,7 @@ export default async function UsersPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs">
             <tr>
@@ -71,4 +71,3 @@ export default async function UsersPage() {
     </div>
   );
 }
-

@@ -25,7 +25,7 @@ export default async function ServiceRequestsPage() {
         <p className="text-gray-500 text-sm mt-1">طلبات واردة من رابط تسجيل العملاء</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs">
             <tr>
