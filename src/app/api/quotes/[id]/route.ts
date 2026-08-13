@@ -36,6 +36,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (quote.convertedSaleId) {
       return NextResponse.json({ error: "تم تحويل هذا العرض لفاتورة مسبقاً" }, { status: 400 });
     }
+    if (quote.status === "REJECTED") {
+      return NextResponse.json({ error: "لا يمكن تحويل عرض سعر مرفوض لفاتورة" }, { status: 400 });
+    }
 
     const user = session.user as any;
     const invoiceNumber = await nextInvoiceNumber();

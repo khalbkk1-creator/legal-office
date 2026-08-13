@@ -42,6 +42,10 @@ export default function QuoteActions({
     return <span className="text-xs text-gray-400">تم التحويل ✓</span>;
   }
 
+  if (status === "REJECTED") {
+    return <span className="text-xs text-red-400">مرفوض — لا يمكن التحويل</span>;
+  }
+
   return (
     <div className="flex items-center gap-3">
       <button
