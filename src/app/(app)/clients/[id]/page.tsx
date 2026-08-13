@@ -39,7 +39,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         <Row label="العنوان" value={client.address ?? "—"} />
       </div>
 
-      <PortalLinkGenerator clientId={client.id} existingToken={client.accessToken} />
+      <PortalLinkGenerator clientId={client.id} existingToken={client.accessToken} clientPhone={client.phone} />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-4">قضايا العميل ({client.cases.length})</h2>

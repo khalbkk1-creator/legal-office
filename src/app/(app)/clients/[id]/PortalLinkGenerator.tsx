@@ -6,15 +6,20 @@ import { useRouter } from "next/navigation";
 export default function PortalLinkGenerator({
   clientId,
   existingToken,
+  clientPhone,
 }: {
   clientId: string;
   existingToken: string | null;
+  clientPhone: string | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const link = existingToken && typeof window !== "undefined" ? `${window.location.origin}/portal/${existingToken}` : "";
+  const whatsappNumber = clientPhone ? clientPhone.replace(/[^0-9]/g, "") : "";
+  const whatsappMessage = encodeURIComponent(`مرحباً، هذا رابط بوابتك الخاصة لمتابعة قضيتك وفواتيرك:\n${link}`);
+  const whatsappHref = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   async function generate() {
     setLoading(true);
@@ -50,6 +55,16 @@ export default function PortalLinkGenerator({
             >
               {copied ? "تم النسخ ✓" : "نسخ الرابط"}
             </button>
+            {clientPhone && (
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg px-3 py-2 whitespace-nowrap"
+              >
+                إرسال واتساب
+              </a>
+            )}
           </div>
           <button
             onClick={generate}

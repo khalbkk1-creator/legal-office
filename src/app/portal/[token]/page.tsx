@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import QuoteResponse from "./QuoteResponse";
+import PortalUpload from "./PortalUpload";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -110,6 +111,7 @@ export default async function ClientPortalPage({ params }: { params: { token: st
                     </div>
                   </div>
                 )}
+                <PortalUpload token={params.token} caseId={c.id} />
               </div>
             ))}
             {client.cases.length === 0 && (
