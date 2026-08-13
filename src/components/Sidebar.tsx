@@ -19,6 +19,7 @@ export default function Sidebar({
     { href: "/clients", label: "العملاء", icon: "👥" },
     { href: "/hearings", label: "الجلسات", icon: "📅" },
     { href: "/consultations", label: "طلبات الاستشارة", icon: "📩" },
+    { href: "/service-requests", label: "طلبات الخدمة", icon: "📋" },
     { href: "/sales", label: "المبيعات", icon: "💰" },
     { href: "/expenses", label: "المصاريف", icon: "💸" },
     { href: "/finance", label: "اللوحة المالية", icon: "📊" },

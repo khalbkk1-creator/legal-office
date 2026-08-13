@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import QuoteResponse from "./QuoteResponse";
 import PortalUpload from "./PortalUpload";
+import ServiceRequestUpload from "./ServiceRequestUpload";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -34,10 +35,14 @@ export default async function ClientPortalPage({ params }: { params: { token: st
       },
       sales: { orderBy: { saleDate: "desc" } },
       quotations: { orderBy: { createdAt: "desc" } },
+      serviceRequests: { orderBy: { createdAt: "desc" } },
     },
   });
 
-  const settings = await prisma.officeSettings.findFirst();
+  const [settings, allCategories] = await Promise.all([
+    prisma.officeSettings.findFirst(),
+    prisma.documentCategory.findMany(),
+  ]);
 
   if (!client) notFound();
 
@@ -119,6 +124,27 @@ export default async function ClientPortalPage({ params }: { params: { token: st
             )}
           </div>
         </div>
+
+        {client.serviceRequests.filter((r) => r.status === "DOCS_REQUESTED" || r.status === "DOCS_SUBMITTED").length > 0 && (
+          <div>
+            <h2 className="font-bold text-ink mb-3">مستندات مطلوبة منك</h2>
+            <div className="space-y-3">
+              {client.serviceRequests
+                .filter((r) => r.status === "DOCS_REQUESTED" || r.status === "DOCS_SUBMITTED")
+                .map((r) => {
+                  const reqCategories = allCategories.filter((c) => r.requestedCategoryIds.includes(c.id));
+                  return (
+                    <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                      <p className="text-sm font-medium text-ink mb-2">
+                        المطلوب: {reqCategories.map((c) => c.name).join("، ") || "مستندات إضافية"}
+                      </p>
+                      <ServiceRequestUpload token={params.token} requestId={r.id} categories={reqCategories} />
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         <div>
           <h2 className="font-bold text-ink mb-3">عروض الأسعار</h2>

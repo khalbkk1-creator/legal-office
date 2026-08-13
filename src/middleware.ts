@@ -13,6 +13,7 @@ export const config = {
     "/users/:path*",
     "/settings/:path*",
     "/consultations/:path*",
+    "/service-requests/:path*",
     "/print/:path*",
   ],
 };

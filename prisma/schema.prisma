@@ -76,6 +76,7 @@ model Quotation {
   createdBy   User?   @relation(fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
+  serviceRequest ServiceRequest?
 
   @@schema("public")
 }
@@ -99,6 +100,7 @@ model ConsultationRequest {
   attachmentName String?
   requestedDate  DateTime // تاريخ ووقت الموعد المطلوب
   status         ConsultationStatus @default(PENDING)
+  serviceRequestId String? // مرجع طلب الخدمة الأصلي إن وجد
   createdAt      DateTime           @default(now())
 
   @@schema("public")
@@ -129,6 +131,58 @@ model Expense {
   createdBy   User?   @relation(fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
+
+  @@schema("public")
+}
+
+enum ServiceRequestType {
+  CASE         // قضية
+  CONSULTATION // استشارة
+
+  @@schema("public")
+}
+
+enum ServiceRequestStatus {
+  NEW             // طلب جديد
+  DOCS_REQUESTED  // بانتظار مستندات من العميل
+  DOCS_SUBMITTED  // العميل رفع المستندات
+  QUOTE_SENT      // تم إرسال عرض سعر
+  ACCEPTED        // العميل وافق على العرض
+  CONVERTED       // تم التحويل لقضية/استشارة
+  REJECTED        // مرفوض
+
+  @@schema("public")
+}
+
+model ServiceRequest {
+  id                      String               @id @default(cuid())
+  clientId                String
+  client                  Client               @relation(fields: [clientId], references: [id])
+  requestType             ServiceRequestType
+  notes                   String?
+  status                  ServiceRequestStatus @default(NEW)
+  requestedCategoryIds    String[]             @default([])
+  quotationId             String?              @unique
+  quotation               Quotation?           @relation(fields: [quotationId], references: [id])
+  convertedCaseId         String?
+  convertedConsultationId String?
+  createdAt               DateTime             @default(now())
+
+  documents ServiceRequestDocument[]
+
+  @@schema("public")
+}
+
+model ServiceRequestDocument {
+  id               String         @id @default(cuid())
+  serviceRequestId String
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  categoryId       String?
+  category         DocumentCategory? @relation(fields: [categoryId], references: [id])
+  fileName         String
+  fileUrl          String
+  fileSize         Int?
+  createdAt        DateTime       @default(now())
 
   @@schema("public")
 }
@@ -206,6 +260,7 @@ model Client {
   cases Case[]
   sales Sale[]
   quotations Quotation[]
+  serviceRequests ServiceRequest[]
 
   @@schema("public")
 }
@@ -248,6 +303,7 @@ model DocumentCategory {
   id        String         @id @default(cuid())
   name      String         @unique
   createdAt DateTime       @default(now())
+  serviceRequestDocuments ServiceRequestDocument[]
   documents CaseDocument[]
 
   @@schema("public")

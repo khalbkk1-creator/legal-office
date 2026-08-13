@@ -7,7 +7,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [officeName, setOfficeName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "", requestType: "CONSULTATION" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -66,6 +66,34 @@ export default function RegisterPage() {
           <p className="text-xs text-gray-400">
             بعد التسجيل راح توديك مباشرة لصفحتك الخاصة، وتقدر تحفظ رابطها للرجوع لها لاحقاً.
           </p>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">نوع الطلب *</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => update("requestType", "CONSULTATION")}
+                className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                  form.requestType === "CONSULTATION"
+                    ? "border-primary-600 bg-primary-50 text-primary-700"
+                    : "border-gray-300 text-gray-600"
+                }`}
+              >
+                استشارة
+              </button>
+              <button
+                type="button"
+                onClick={() => update("requestType", "CASE")}
+                className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                  form.requestType === "CASE"
+                    ? "border-primary-600 bg-primary-50 text-primary-700"
+                    : "border-gray-300 text-gray-600"
+                }`}
+              >
+                قضية
+              </button>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل *</label>

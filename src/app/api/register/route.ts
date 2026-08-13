@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
   const phone = (body.phone || "").trim();
   const email = (body.email || "").trim();
   const notes = (body.notes || "").trim();
+  const requestType = body.requestType === "CASE" ? "CASE" : "CONSULTATION";
 
   if (!name || !phone) {
     return NextResponse.json({ error: "الاسم والجوال مطلوبان" }, { status: 400 });
@@ -22,6 +23,14 @@ export async function POST(req: NextRequest) {
       email: email || undefined,
       notes: notes || undefined,
       accessToken,
+    },
+  });
+
+  await prisma.serviceRequest.create({
+    data: {
+      clientId: client.id,
+      requestType,
+      notes: notes || undefined,
     },
   });
 
