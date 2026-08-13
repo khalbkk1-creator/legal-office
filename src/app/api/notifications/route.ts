@@ -21,32 +21,55 @@ export async function GET() {
   const now = Date.now();
   const DAY = 1000 * 60 * 60 * 24;
 
-  const [newRequests, docsSubmitted, acceptedQuotesInRequests, pendingConsultations, upcomingHearings, appealCases, overdueSales, staleQuotes] =
-    await Promise.all([
-      prisma.serviceRequest.findMany({ where: { status: "NEW" }, include: { client: true } }),
-      prisma.serviceRequest.findMany({ where: { status: "DOCS_SUBMITTED" }, include: { client: true } }),
-      prisma.serviceRequest.findMany({
-        where: { status: { not: "CONVERTED" }, quotation: { status: "ACCEPTED" } },
-        include: { client: true, quotation: true },
-      }),
-      prisma.consultationRequest.findMany({ where: { status: "PENDING" } }),
-      prisma.hearing.findMany({
-        where: { date: { gte: new Date(), lte: new Date(now + 3 * DAY) } },
-        include: { case: { include: { client: true } } },
-      }),
-      prisma.case.findMany({
-        where: { appealDeadline: { not: null, lte: new Date(now + 7 * DAY) }, status: { not: "CLOSED" } },
-        include: { client: true },
-      }),
-      prisma.sale.findMany({
-        where: { paymentStatus: { not: "PAID" }, saleDate: { lte: new Date(now - 15 * DAY) } },
-        include: { client: true },
-      }),
-      prisma.quotation.findMany({
-        where: { status: "PENDING", createdAt: { lte: new Date(now - 5 * DAY) } },
-        include: { client: true },
-      }),
-    ]);
+  const [
+    newRequests,
+    docsSubmitted,
+    acceptedQuotesInRequests,
+    pendingConsultations,
+    upcomingHearings,
+    appealCases,
+    allUnpaidSales,
+    staleQuotes,
+    expiredQuotes,
+    hearingsMissingReports,
+    unassignedCases,
+  ] = await Promise.all([
+    prisma.serviceRequest.findMany({ where: { status: "NEW" }, include: { client: true } }),
+    prisma.serviceRequest.findMany({ where: { status: "DOCS_SUBMITTED" }, include: { client: true } }),
+    prisma.serviceRequest.findMany({
+      where: { status: { not: "CONVERTED" }, quotation: { status: "ACCEPTED" } },
+      include: { client: true, quotation: true },
+    }),
+    prisma.consultationRequest.findMany({ where: { status: "PENDING" } }),
+    prisma.hearing.findMany({
+      where: { date: { gte: new Date(), lte: new Date(now + 3 * DAY) } },
+      include: { case: { include: { client: true } } },
+    }),
+    prisma.case.findMany({
+      where: { appealDeadline: { not: null, lte: new Date(now + 7 * DAY) }, status: { not: "CLOSED" } },
+      include: { client: true },
+    }),
+    prisma.sale.findMany({
+      where: { paymentStatus: { not: "PAID" } },
+      include: { client: true },
+    }),
+    prisma.quotation.findMany({
+      where: { status: "PENDING", createdAt: { lte: new Date(now - 5 * DAY) } },
+      include: { client: true },
+    }),
+    prisma.quotation.findMany({
+      where: { status: "PENDING", validUntil: { not: null, lt: new Date() } },
+      include: { client: true },
+    }),
+    prisma.hearing.findMany({
+      where: { date: { lt: new Date() }, reportUrl: null },
+      include: { case: true },
+    }),
+    prisma.case.findMany({
+      where: { lawyerId: null, status: { not: "CLOSED" } },
+      include: { client: true },
+    }),
+  ]);
 
   for (const r of newRequests) {
     notifications.push({
@@ -121,15 +144,16 @@ export async function GET() {
     });
   }
 
-  for (const s of overdueSales) {
+  for (const s of allUnpaidSales) {
     const days = Math.floor((now - s.saleDate.getTime()) / DAY);
+    const remaining = s.totalAmount - s.paidAmount;
     notifications.push({
       id: `sale-${s.id}`,
       icon: "💸",
-      title: `فاتورة متأخرة — ${s.client.name}`,
-      description: `${s.invoiceNumber} متأخرة ${days} يوم — ${(s.totalAmount - s.paidAmount).toLocaleString()} ر.س`,
+      title: `فاتورة غير محصّلة — ${s.client.name}`,
+      description: `${s.invoiceNumber} · ${remaining.toLocaleString()} ر.س${days > 0 ? ` · منذ ${days} يوم` : ""}`,
       href: `/sales`,
-      urgency: "medium",
+      urgency: days >= 30 ? "high" : days >= 7 ? "medium" : "low",
       date: s.saleDate.toISOString(),
     });
   }
@@ -143,6 +167,43 @@ export async function GET() {
       href: `/quotes`,
       urgency: "low",
       date: q.createdAt.toISOString(),
+    });
+  }
+
+  for (const q of expiredQuotes) {
+    notifications.push({
+      id: `quote-expired-${q.id}`,
+      icon: "⏰",
+      title: `عرض سعر منتهي الصلاحية — ${q.client.name}`,
+      description: q.quoteNumber,
+      href: `/quotes`,
+      urgency: "medium",
+      date: (q.validUntil ?? q.createdAt).toISOString(),
+    });
+  }
+
+  for (const h of hearingsMissingReports) {
+    const days = Math.floor((now - h.date.getTime()) / DAY);
+    notifications.push({
+      id: `hearing-report-${h.id}`,
+      icon: "📄",
+      title: `جلسة بدون تقرير — ${h.case.title}`,
+      description: `منذ ${days} يوم`,
+      href: `/cases/${h.caseId}`,
+      urgency: days >= 7 ? "high" : "medium",
+      date: h.date.toISOString(),
+    });
+  }
+
+  for (const c of unassignedCases) {
+    notifications.push({
+      id: `case-unassigned-${c.id}`,
+      icon: "👤",
+      title: `قضية بدون محامي — ${c.title}`,
+      description: `${c.client.name} · ${c.caseNumber}`,
+      href: `/cases/${c.id}`,
+      urgency: "medium",
+      date: c.createdAt.toISOString(),
     });
   }
 
