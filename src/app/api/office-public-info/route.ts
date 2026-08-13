@@ -6,5 +6,8 @@ export async function GET() {
   return NextResponse.json({
     officeName: settings?.officeName ?? null,
     logoUrl: settings?.logoUrl ?? null,
+    phoneConsultationRate: settings?.phoneConsultationRate ?? null,
+    inPersonConsultationRate: settings?.inPersonConsultationRate ?? null,
+    writtenConsultationRate: settings?.writtenConsultationRate ?? null,
   });
 }

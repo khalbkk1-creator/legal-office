@@ -27,6 +27,9 @@ export default function SettingsPage() {
     phone: "",
     address: "",
     defaultHourlyRate: "",
+    phoneConsultationRate: "",
+    inPersonConsultationRate: "",
+    writtenConsultationRate: "",
   });
 
   useEffect(() => {
@@ -40,6 +43,9 @@ export default function SettingsPage() {
           phone: data.phone ?? "",
           address: data.address ?? "",
           defaultHourlyRate: data.defaultHourlyRate?.toString() ?? "",
+          phoneConsultationRate: data.phoneConsultationRate?.toString() ?? "",
+          inPersonConsultationRate: data.inPersonConsultationRate?.toString() ?? "",
+          writtenConsultationRate: data.writtenConsultationRate?.toString() ?? "",
         });
         setLoading(false);
       });
@@ -221,6 +227,53 @@ export default function SettingsPage() {
           {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
         </button>
       </form>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-4">
+        <h2 className="font-bold text-ink mb-1">تصنيف الاستشارات</h2>
+        <p className="text-xs text-gray-400 mb-4">
+          سعر الساعة لكل نوع استشارة — يُستخدم لحساب التكلفة تلقائياً بصفحة تسجيل العملاء.
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">📞 سعر ساعة الاستشارة الهاتفية (ر.س)</label>
+            <input
+              type="number"
+              min="0"
+              value={form.phoneConsultationRate}
+              onChange={(e) => update("phoneConsultationRate", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">🏢 سعر ساعة الاستشارة الحضورية (ر.س)</label>
+            <input
+              type="number"
+              min="0"
+              value={form.inPersonConsultationRate}
+              onChange={(e) => update("inPersonConsultationRate", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">✍️ سعر ساعة الاستشارة الكتابية (ر.س)</label>
+            <input
+              type="number"
+              min="0"
+              value={form.writtenConsultationRate}
+              onChange={(e) => update("writtenConsultationRate", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-60"
+          >
+            {saving ? "جاري الحفظ..." : "حفظ أسعار الاستشارات"}
+          </button>
+        </form>
+      </div>
 
       <p className="text-xs text-gray-400 mt-3">
         هذه البيانات تظهر تلقائياً بأعلى كل فاتورة وعرض سعر عند الطباعة.

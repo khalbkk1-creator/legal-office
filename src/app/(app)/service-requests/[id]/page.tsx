@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import ServiceRequestActions from "./ServiceRequestActions";
 
 const typeLabels: Record<string, string> = { CASE: "قضية", CONSULTATION: "استشارة" };
+const consultationTypeLabels: Record<string, string> = {
+  PHONE: "📞 استشارة هاتفية",
+  IN_PERSON: "🏢 استشارة حضورية",
+  WRITTEN: "✍️ استشارة كتابية",
+};
 
 export default async function ServiceRequestDetailPage({ params }: { params: { id: string } }) {
   const [request, categories] = await Promise.all([
@@ -36,6 +41,31 @@ export default async function ServiceRequestDetailPage({ params }: { params: { i
           </Link>
         )}
       </div>
+
+      {request.requestType === "CONSULTATION" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="font-bold text-ink mb-3">تفاصيل الاستشارة</h2>
+          <div className="space-y-1 text-sm">
+            {request.consultationType && (
+              <p><span className="text-gray-400">النوع:</span> {consultationTypeLabels[request.consultationType]}</p>
+            )}
+            {request.requestedDate && (
+              <p>
+                <span className="text-gray-400">الموعد المطلوب:</span>{" "}
+                {new Date(request.requestedDate).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })}
+                {" — "}
+                {new Date(request.requestedDate).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
+            {request.durationMinutes && (
+              <p><span className="text-gray-400">المدة:</span> {(request.durationMinutes / 60).toFixed(1)} ساعة</p>
+            )}
+            {request.estimatedCost != null && (
+              <p><span className="text-gray-400">التكلفة:</span> <span className="font-bold text-primary-700">{request.estimatedCost.toLocaleString()} ر.س</span></p>
+            )}
+          </div>
+        </div>
+      )}
 
       {request.notes && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

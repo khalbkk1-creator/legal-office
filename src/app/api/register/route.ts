@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
       clientId: client.id,
       requestType,
       notes: notes || undefined,
+      consultationType: requestType === "CONSULTATION" ? body.consultationType || undefined : undefined,
+      requestedDate: body.requestedDate ? new Date(body.requestedDate) : undefined,
+      durationMinutes: body.durationMinutes ? Number(body.durationMinutes) : undefined,
+      estimatedCost: body.estimatedCost ? Number(body.estimatedCost) : undefined,
     },
   });
 

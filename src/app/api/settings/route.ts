@@ -37,6 +37,15 @@ export async function PATCH(req: NextRequest) {
   if ("defaultHourlyRate" in body) {
     data.defaultHourlyRate = body.defaultHourlyRate ? Number(body.defaultHourlyRate) : null;
   }
+  if ("phoneConsultationRate" in body) {
+    data.phoneConsultationRate = body.phoneConsultationRate ? Number(body.phoneConsultationRate) : null;
+  }
+  if ("inPersonConsultationRate" in body) {
+    data.inPersonConsultationRate = body.inPersonConsultationRate ? Number(body.inPersonConsultationRate) : null;
+  }
+  if ("writtenConsultationRate" in body) {
+    data.writtenConsultationRate = body.writtenConsultationRate ? Number(body.writtenConsultationRate) : null;
+  }
 
   const updated = await prisma.officeSettings.update({
     where: { id: settings.id },

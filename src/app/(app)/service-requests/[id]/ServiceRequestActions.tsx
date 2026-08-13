@@ -89,7 +89,36 @@ export default function ServiceRequestActions({
   }
 
   const quoteAccepted = quotation?.status === "ACCEPTED";
-  const showConvert = quoteAccepted && status !== "CONVERTED";
+  const showConvert = requestType === "CASE" ? quoteAccepted && status !== "CONVERTED" : status !== "CONVERTED";
+
+  if (requestType === "CONSULTATION") {
+    return (
+      <div className="space-y-6">
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+
+        {showConvert && (
+          <div className="bg-primary-50 border border-primary-100 rounded-2xl p-6">
+            <p className="text-sm text-primary-800 mb-3">
+              راجع تفاصيل الاستشارة أعلاه، ثم أكّد الموعد لينتقل الطلب لشاشة طلبات الاستشارة.
+            </p>
+            <button
+              onClick={convert}
+              disabled={converting}
+              className="bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+            >
+              {converting ? "جاري التأكيد..." : "تأكيد الموعد ونقله لطلبات الاستشارة"}
+            </button>
+          </div>
+        )}
+
+        {convertResult && (
+          <div className="bg-primary-50 border border-primary-100 rounded-2xl p-6 text-sm text-primary-800">
+            تم التأكيد بنجاح! راجع الموعد من شاشة طلبات الاستشارة.
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -192,21 +221,21 @@ export default function ServiceRequestActions({
       {showConvert && (
         <div className="bg-primary-50 border border-primary-100 rounded-2xl p-6">
           <p className="text-sm text-primary-800 mb-3">
-            وافق العميل على العرض! حوّل الطلب الآن إلى {requestType === "CASE" ? "قضية" : "استشارة"} مع كل مستنداته.
+            وافق العميل على العرض! حوّل الطلب الآن إلى قضية مع كل مستنداته.
           </p>
           <button
             onClick={convert}
             disabled={converting}
             className="bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
           >
-            {converting ? "جاري التحويل..." : `تحويل إلى ${requestType === "CASE" ? "قضية" : "استشارة"}`}
+            {converting ? "جاري التحويل..." : "تحويل إلى قضية"}
           </button>
         </div>
       )}
 
       {convertResult && (
         <div className="bg-primary-50 border border-primary-100 rounded-2xl p-6 text-sm text-primary-800">
-          تم التحويل بنجاح! راجع الطلب من شاشة {convertResult.destination === "case" ? "القضايا" : "طلبات الاستشارة"}.
+          تم التحويل بنجاح! راجع الطلب من شاشة القضايا.
         </div>
       )}
     </div>

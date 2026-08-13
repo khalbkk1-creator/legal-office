@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import ConsultationActions from "./ConsultationActions";
-import BookingLinkCopy from "./BookingLinkCopy";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: "بانتظار المراجعة", color: "bg-amber-50 text-amber-700" },
@@ -18,10 +17,9 @@ export default async function ConsultationsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-ink">طلبات الاستشارة</h1>
-        <p className="text-gray-500 text-sm mt-1 mb-3">
-          شارك رابط الحجز مع العملاء المحتملين ليقدروا يحددون موعدهم بأنفسهم:
+        <p className="text-gray-500 text-sm mt-1">
+          المواعيد المؤكدة تظهر هنا بعد تحويلها من شاشة طلبات الخدمة.
         </p>
-        <BookingLinkCopy />
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">

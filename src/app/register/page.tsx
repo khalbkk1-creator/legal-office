@@ -3,11 +3,32 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const CONSULTATION_TYPES = [
+  { value: "PHONE", label: "📞 استشارة هاتفية" },
+  { value: "IN_PERSON", label: "🏢 استشارة حضورية" },
+  { value: "WRITTEN", label: "✍️ استشارة كتابية" },
+];
+
 export default function RegisterPage() {
   const router = useRouter();
   const [officeName, setOfficeName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "", requestType: "CONSULTATION" });
+  const [rates, setRates] = useState<{ PHONE: number; IN_PERSON: number; WRITTEN: number }>({
+    PHONE: 0,
+    IN_PERSON: 0,
+    WRITTEN: 0,
+  });
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    notes: "",
+    requestType: "CONSULTATION",
+    consultationType: "PHONE",
+    date: "",
+    time: "",
+    durationHours: "1",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -17,6 +38,11 @@ export default function RegisterPage() {
       .then((d) => {
         setOfficeName(d.officeName || "");
         setLogoUrl(d.logoUrl || "");
+        setRates({
+          PHONE: d.phoneConsultationRate || 0,
+          IN_PERSON: d.inPersonConsultationRate || 0,
+          WRITTEN: d.writtenConsultationRate || 0,
+        });
       })
       .catch(() => {});
   }, []);
@@ -24,6 +50,9 @@ export default function RegisterPage() {
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  const selectedRate = rates[form.consultationType as keyof typeof rates] || 0;
+  const estimatedCost = selectedRate * (Number(form.durationHours) || 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +62,12 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        requestedDate: form.requestType === "CONSULTATION" && form.date && form.time ? `${form.date}T${form.time}` : undefined,
+        durationMinutes: form.requestType === "CONSULTATION" ? Math.round(Number(form.durationHours) * 60) : undefined,
+        estimatedCost: form.requestType === "CONSULTATION" ? estimatedCost : undefined,
+      }),
     });
 
     if (!res.ok) {
@@ -127,8 +161,82 @@ export default function RegisterPage() {
             />
           </div>
 
+          {form.requestType === "CONSULTATION" && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">نوع الاستشارة *</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {CONSULTATION_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => update("consultationType", t.value)}
+                      className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
+                        form.consultationType === t.value
+                          ? "border-primary-600 bg-primary-50 text-primary-700"
+                          : "border-gray-300 text-gray-600"
+                      }`}
+                    >
+                      <span>{t.label}</span>
+                      <span className="text-xs text-gray-400">
+                        {rates[t.value as keyof typeof rates] > 0
+                          ? `${rates[t.value as keyof typeof rates].toLocaleString()} ر.س/ساعة`
+                          : ""}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">التاريخ المناسب *</label>
+                  <input
+                    required
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => update("date", e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الوقت المناسب *</label>
+                  <input
+                    required
+                    type="time"
+                    value={form.time}
+                    onChange={(e) => update("time", e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">المدة المطلوبة (ساعات) *</label>
+                <input
+                  required
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={form.durationHours}
+                  onChange={(e) => update("durationHours", e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              {selectedRate > 0 && (
+                <div className="bg-primary-50 rounded-lg p-3 text-sm flex justify-between items-center">
+                  <span className="text-primary-800">التكلفة التقديرية</span>
+                  <span className="font-bold text-primary-700">{estimatedCost.toLocaleString()} ر.س</span>
+                </div>
+              )}
+            </>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {form.requestType === "CONSULTATION" ? "تفاصيل الاستشارة (اختياري)" : "تفاصيل القضية (اختياري)"}
+            </label>
             <textarea
               value={form.notes}
               onChange={(e) => update("notes", e.target.value)}

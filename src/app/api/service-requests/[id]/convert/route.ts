@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (request.status === "CONVERTED") {
     return NextResponse.json({ error: "تم تحويل هذا الطلب مسبقاً" }, { status: 400 });
   }
-  if (!request.quotation || request.quotation.status !== "ACCEPTED") {
+  if (request.requestType === "CASE" && (!request.quotation || request.quotation.status !== "ACCEPTED")) {
     return NextResponse.json({ error: "يجب موافقة العميل على عرض السعر أولاً" }, { status: 400 });
   }
 
@@ -56,13 +56,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   // CONSULTATION
+  const consultationLabels: Record<string, string> = {
+    PHONE: "استشارة هاتفية",
+    IN_PERSON: "استشارة حضورية",
+    WRITTEN: "استشارة كتابية",
+  };
+  const typeLabel = request.consultationType ? consultationLabels[request.consultationType] : "";
+  const costNote = request.estimatedCost ? ` — التكلفة: ${request.estimatedCost.toLocaleString()} ر.س` : "";
+  const combinedNotes = [typeLabel, request.notes, costNote].filter(Boolean).join(" | ");
+
   const consultation = await prisma.consultationRequest.create({
     data: {
       name: request.client.name,
       phone: request.client.phone || "",
       email: request.client.email || undefined,
-      notes: request.notes || undefined,
-      requestedDate: new Date(),
+      notes: combinedNotes || undefined,
+      requestedDate: request.requestedDate ?? new Date(),
       status: "CONFIRMED",
       serviceRequestId: request.id,
     },

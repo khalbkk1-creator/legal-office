@@ -162,6 +162,10 @@ model ServiceRequest {
   notes                   String?
   status                  ServiceRequestStatus @default(NEW)
   requestedCategoryIds    String[]             @default([])
+  consultationType        String? // PHONE / IN_PERSON / WRITTEN
+  requestedDate           DateTime? // تاريخ ووقت الاستشارة المطلوب
+  durationMinutes         Int? // مدة الاستشارة بالدقائق
+  estimatedCost           Float? // التكلفة المحسوبة تلقائياً
   quotationId             String?              @unique
   quotation               Quotation?           @relation(fields: [quotationId], references: [id])
   convertedCaseId         String?
@@ -225,6 +229,9 @@ model OfficeSettings {
   phone         String?
   address       String?
   defaultHourlyRate Float? // سعر الساعة الافتراضي
+  phoneConsultationRate    Float? // سعر ساعة الاستشارة الهاتفية
+  inPersonConsultationRate Float? // سعر ساعة الاستشارة الحضورية
+  writtenConsultationRate  Float? // سعر ساعة الاستشارة الكتابية
   updatedAt     DateTime @updatedAt
 
   @@schema("public")
