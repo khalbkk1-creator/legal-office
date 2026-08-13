@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import QuoteResponse from "./QuoteResponse";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -7,6 +8,13 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   ACTIVE: { label: "جارية", color: "bg-primary-50 text-primary-700" },
   ON_HOLD: { label: "معلقة", color: "bg-amber-50 text-amber-700" },
   CLOSED: { label: "مغلقة", color: "bg-red-50 text-red-600" },
+};
+
+const quoteStatusLabels: Record<string, { label: string; color: string }> = {
+  PENDING: { label: "بانتظار ردك", color: "bg-amber-50 text-amber-700" },
+  ACCEPTED: { label: "تمت الموافقة", color: "bg-primary-50 text-primary-700" },
+  REJECTED: { label: "مرفوض", color: "bg-red-50 text-red-600" },
+  EXPIRED: { label: "منتهي الصلاحية", color: "bg-gray-100 text-gray-600" },
 };
 
 const paymentLabels: Record<string, { label: string; color: string }> = {
@@ -24,6 +32,7 @@ export default async function ClientPortalPage({ params }: { params: { token: st
         orderBy: { createdAt: "desc" },
       },
       sales: { orderBy: { saleDate: "desc" } },
+      quotations: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -105,6 +114,28 @@ export default async function ClientPortalPage({ params }: { params: { token: st
             ))}
             {client.cases.length === 0 && (
               <p className="text-sm text-gray-400">لا توجد قضايا مسجّلة بعد.</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="font-bold text-ink mb-3">عروض الأسعار</h2>
+          <div className="space-y-3">
+            {client.quotations.map((q) => (
+              <div key={q.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-bold text-ink">{q.quoteNumber}</p>
+                  <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${quoteStatusLabels[q.status].color}`}>
+                    {quoteStatusLabels[q.status].label}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mb-2">{q.description}</p>
+                <p className="text-sm font-bold text-primary-700 mb-2">{q.totalAmount.toLocaleString()} ر.س</p>
+                {q.status === "PENDING" && <QuoteResponse token={params.token} quoteId={q.id} />}
+              </div>
+            ))}
+            {client.quotations.length === 0 && (
+              <p className="text-sm text-gray-400">لا توجد عروض أسعار حالياً.</p>
             )}
           </div>
         </div>
