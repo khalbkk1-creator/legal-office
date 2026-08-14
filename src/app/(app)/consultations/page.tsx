@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import ConsultationActions from "./ConsultationActions";
 import ClickableRow from "@/components/ClickableRow";
+import StopPropagation from "@/components/StopPropagation";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: "بانتظار المراجعة", color: "bg-amber-50 text-amber-700" },
@@ -49,9 +50,11 @@ export default async function ConsultationsPage() {
                 <td className="px-5 py-3 text-gray-600 max-w-xs truncate">{r.notes || "—"}</td>
                 <td className="px-5 py-3">
                   {r.attachmentUrl ? (
-                    <a href={r.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline text-xs" onClick={(e) => e.stopPropagation()}>
-                      📄 {r.attachmentName}
-                    </a>
+                    <StopPropagation>
+                      <a href={r.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline text-xs">
+                        📄 {r.attachmentName}
+                      </a>
+                    </StopPropagation>
                   ) : (
                     "—"
                   )}
@@ -61,8 +64,10 @@ export default async function ConsultationsPage() {
                     {statusLabels[r.status].label}
                   </span>
                 </td>
-                <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                  <ConsultationActions requestId={r.id} status={r.status} />
+                <td className="px-5 py-3">
+                  <StopPropagation>
+                    <ConsultationActions requestId={r.id} status={r.status} />
+                  </StopPropagation>
                 </td>
               </ClickableRow>
             ))}
