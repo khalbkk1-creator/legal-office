@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 const DOCUMENT_TYPES = [
   { value: "RESPONSE_MEMO", label: "مذكرة جوابية" },
@@ -15,12 +15,13 @@ const DOCUMENT_TYPES = [
 
 export default function DocumentGenerator({ caseId }: { caseId: string }) {
   const [templateType, setTemplateType] = useState("RESPONSE_MEMO");
-  const [bodyText, setBodyText] = useState("");
+  const [facts, setFacts] = useState("");
+  const [legalGrounds, setLegalGrounds] = useState("");
+  const [requests, setRequests] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const printFormRef = useRef<HTMLFormElement>(null);
-  const templateInputRef = useRef<HTMLInputElement>(null);
-  const bodyInputRef = useRef<HTMLInputElement>(null);
+
+  const payload = { templateType, facts, legalGrounds, requests };
 
   async function handleGenerate() {
     setLoading(true);
@@ -29,7 +30,7 @@ export default function DocumentGenerator({ caseId }: { caseId: string }) {
     const res = await fetch(`/api/cases/${caseId}/generate-document`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ templateType, bodyText }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -55,11 +56,31 @@ export default function DocumentGenerator({ caseId }: { caseId: string }) {
     setLoading(false);
   }
 
+  function printPdf() {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `/api/cases/${caseId}/generate-document-html`;
+    form.target = "_blank";
+    for (const [key, value] of Object.entries(payload)) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <h2 className="font-bold text-ink mb-4">توليد مستند</h2>
+      <h2 className="font-bold text-ink mb-1">توليد مذكرة</h2>
+      <p className="text-xs text-gray-400 mb-4">
+        بيانات القضية (العميل، الطرف الآخر، رقم القضية، المحكمة) تُدمج تلقائياً بفقرة افتتاحية داخل نص المذكرة.
+      </p>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">نوع المستند</label>
           <select
@@ -74,17 +95,37 @@ export default function DocumentGenerator({ caseId }: { caseId: string }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">نص المستند</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">أولاً: الوقائع</label>
           <textarea
-            value={bodyText}
-            onChange={(e) => setBodyText(e.target.value)}
-            rows={6}
-            placeholder="اكتب محتوى المذكرة أو التقرير هنا..."
+            value={facts}
+            onChange={(e) => setFacts(e.target.value)}
+            rows={4}
+            placeholder={"اكتب وقائع القضية...\nابدأ السطر بـ - لإضافة نقطة"}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
-          <p className="text-xs text-gray-400 mt-1">
-            بيانات القضية (رقم القضية، العميل، المحكمة...) تنضاف تلقائياً بأعلى المستند.
-          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ثانياً: الأسانيد القانونية</label>
+          <textarea
+            value={legalGrounds}
+            onChange={(e) => setLegalGrounds(e.target.value)}
+            rows={4}
+            placeholder={"اكتب الأسانيد والحجج القانونية...\nابدأ السطر بـ - لإضافة نقطة"}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ثالثاً: الطلبات</label>
+          <textarea
+            value={requests}
+            onChange={(e) => setRequests(e.target.value)}
+            rows={3}
+            placeholder={"اكتب طلباتك للمحكمة...\nابدأ السطر بـ - لإضافة نقطة"}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-gray-400 mt-1">💡 ابدأ أي سطر بـ "- " ليتحول تلقائياً لنقطة مرقّمة بالمستند.</p>
         </div>
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
@@ -97,22 +138,13 @@ export default function DocumentGenerator({ caseId }: { caseId: string }) {
           >
             {loading ? "جاري التوليد..." : "📄 توليد وتنزيل Word"}
           </button>
-
-          <form
-            ref={printFormRef}
-            action={`/api/cases/${caseId}/generate-document-html`}
-            method="POST"
-            target="_blank"
+          <button
+            onClick={printPdf}
+            type="button"
+            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium"
           >
-            <input ref={templateInputRef} type="hidden" name="templateType" value={templateType} readOnly />
-            <input ref={bodyInputRef} type="hidden" name="bodyText" value={bodyText} readOnly />
-            <button
-              type="submit"
-              className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium"
-            >
-              🖨️ عرض / طباعة PDF
-            </button>
-          </form>
+            🖨️ عرض / طباعة PDF
+          </button>
         </div>
       </div>
     </div>

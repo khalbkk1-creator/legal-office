@@ -22,13 +22,41 @@ function escapeHtml(text: string) {
     .replace(/"/g, "&quot;");
 }
 
+function renderSectionHtml(heading: string, text: string) {
+  if (!text.trim()) return "";
+  const lines = text.split("\n").filter((l) => l.trim().length > 0);
+  const bulletLines = lines.filter((l) => l.trim().startsWith("- ") || l.trim().startsWith("• "));
+  const isAllBullets = bulletLines.length === lines.length && lines.length > 0;
+
+  let bodyHtml = "";
+  if (isAllBullets) {
+    bodyHtml = `<ul style="margin:0; padding-inline-start: 20px;">${lines
+      .map((l) => `<li style="margin-bottom:6px;">${escapeHtml(l.trim().replace(/^[-•]\s*/, ""))}</li>`)
+      .join("")}</ul>`;
+  } else {
+    bodyHtml = lines
+      .map((l) => {
+        const trimmed = l.trim();
+        if (trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
+          return `<p style="margin:0 0 6px 0;">• ${escapeHtml(trimmed.replace(/^[-•]\s*/, ""))}</p>`;
+        }
+        return `<p style="margin:0 0 10px 0;">${escapeHtml(trimmed)}</p>`;
+      })
+      .join("");
+  }
+
+  return `<h3 style="font-size:15px; font-weight:bold; margin:16px 0 8px 0;">${escapeHtml(heading)}</h3>${bodyHtml}`;
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const formData = await req.formData();
   const templateType = (formData.get("templateType") as string) || "";
-  const bodyText = (formData.get("bodyText") as string) || "";
+  const facts = (formData.get("facts") as string) || "";
+  const legalGrounds = (formData.get("legalGrounds") as string) || "";
+  const requests = (formData.get("requests") as string) || "";
 
   const [item, settings] = await Promise.all([
     prisma.case.findUnique({
@@ -43,11 +71,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const docTitle = DOCUMENT_TITLES[templateType] || "مستند";
   const today = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
 
-  const paragraphsHtml = bodyText
-    .split("\n")
-    .filter((p) => p.trim().length > 0)
-    .map((p) => `<p style="margin: 0 0 12px 0;">${escapeHtml(p)}</p>`)
-    .join("");
+  const opening =
+    `يتقدم الموكل / ${item.client.name} بهذه ${docTitle}` +
+    (item.opposingParty ? ` في مواجهة / ${item.opposingParty}` : "") +
+    `، وذلك في القضية رقم (${item.caseNumber})` +
+    (item.court ? ` المنظورة أمام ${item.court}` : "") +
+    `، للأسباب الآتية:`;
+
+  const sectionsHtml =
+    renderSectionHtml("أولاً: الوقائع", facts) +
+    renderSectionHtml("ثانياً: الأسانيد القانونية", legalGrounds) +
+    renderSectionHtml("ثالثاً: الطلبات", requests);
 
   const letterheadStyle = settings?.letterheadUrl
     ? `background-image: url('${settings.letterheadUrl}'); background-size: 100% 100%; background-repeat: no-repeat;`
@@ -89,9 +123,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     cursor: pointer;
     z-index: 100;
   }
-  h1 { font-size: 20px; text-align: center; margin: 0 0 20px 0; }
-  .meta { font-size: 13px; margin: 4px 0; }
-  .body-text { font-size: 14px; line-height: 1.9; margin-top: 20px; }
+  h1 { font-size: 20px; text-align: center; margin: 0 0 6px 0; }
+  .date { font-size: 12px; text-align: center; color: #666; margin: 0 0 20px 0; }
+  .opening { font-size: 14px; line-height: 1.9; margin-bottom: 10px; }
+  .sections { font-size: 14px; line-height: 1.9; }
   .signature { margin-top: 60px; text-align: left; font-size: 13px; }
 </style>
 </head>
@@ -99,13 +134,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   <button class="print-btn" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
   <div class="page">
     <h1>${escapeHtml(docTitle)}</h1>
-    <p class="meta">التاريخ: ${escapeHtml(today)}</p>
-    <p class="meta">رقم القضية: ${escapeHtml(item.caseNumber)}</p>
-    <p class="meta">موضوع القضية: ${escapeHtml(item.title)}</p>
-    ${item.court ? `<p class="meta">المحكمة: ${escapeHtml(item.court)}</p>` : ""}
-    <p class="meta">العميل: ${escapeHtml(item.client.name)}</p>
-    ${item.opposingParty ? `<p class="meta">الطرف الآخر: ${escapeHtml(item.opposingParty)}</p>` : ""}
-    <div class="body-text">${paragraphsHtml || "<p>—</p>"}</div>
+    <p class="date">التاريخ: ${escapeHtml(today)}</p>
+    <p class="opening">${escapeHtml(opening)}</p>
+    <div class="sections">${sectionsHtml}</div>
     <div class="signature">المحامي: ${escapeHtml(item.lawyer?.name ?? "—")}</div>
   </div>
 </body>

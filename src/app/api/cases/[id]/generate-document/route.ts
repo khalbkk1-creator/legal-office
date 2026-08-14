@@ -21,11 +21,21 @@ const DOCUMENT_TITLES: Record<string, string> = {
   LETTER: "خطاب رسمي",
 };
 
-function rtlParagraph(text: string, opts: { bold?: boolean; size?: number; alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingAfter?: number } = {}) {
+function rtlParagraph(
+  text: string,
+  opts: {
+    bold?: boolean;
+    size?: number;
+    alignment?: (typeof AlignmentType)[keyof typeof AlignmentType];
+    spacingAfter?: number;
+    bullet?: boolean;
+  } = {}
+) {
   return new Paragraph({
     bidirectional: true,
     alignment: opts.alignment ?? AlignmentType.RIGHT,
     spacing: { after: opts.spacingAfter ?? 200 },
+    bullet: opts.bullet ? { level: 0 } : undefined,
     children: [
       new TextRun({
         text,
@@ -38,13 +48,31 @@ function rtlParagraph(text: string, opts: { bold?: boolean; size?: number; align
   });
 }
 
+// يحوّل نص حر إلى فقرات منسّقة: الأسطر التي تبدأ بـ "- " تصير نقاط
+function renderSection(children: Paragraph[], heading: string, text: string) {
+  if (!text.trim()) return;
+  children.push(rtlParagraph(heading, { bold: true, size: 26, spacingAfter: 150 }));
+  const lines = text.split("\n").filter((l) => l.trim().length > 0);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
+      children.push(rtlParagraph(trimmed.replace(/^[-•]\s*/, ""), { bullet: true, spacingAfter: 120 }));
+    } else {
+      children.push(rtlParagraph(trimmed, { spacingAfter: 150 }));
+    }
+  }
+  children.push(new Paragraph({ text: "", spacing: { after: 200 } }));
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const body = await req.json();
   const templateType = body.templateType as string;
-  const bodyText = (body.bodyText as string) || "";
+  const facts = (body.facts as string) || "";
+  const legalGrounds = (body.legalGrounds as string) || "";
+  const requests = (body.requests as string) || "";
 
   const [item, settings] = await Promise.all([
     prisma.case.findUnique({
@@ -71,29 +99,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   children.push(new Paragraph({ text: "", spacing: { after: 300 } }));
 
   // عنوان المستند
-  children.push(rtlParagraph(docTitle, { bold: true, size: 32, alignment: AlignmentType.CENTER, spacingAfter: 300 }));
+  children.push(rtlParagraph(docTitle, { bold: true, size: 32, alignment: AlignmentType.CENTER, spacingAfter: 100 }));
+  children.push(rtlParagraph(`التاريخ: ${today}`, { alignment: AlignmentType.CENTER, spacingAfter: 300 }));
 
-  // بيانات القضية
-  children.push(rtlParagraph(`التاريخ: ${today}`));
-  children.push(rtlParagraph(`رقم القضية: ${item.caseNumber}`));
-  children.push(rtlParagraph(`موضوع القضية: ${item.title}`));
-  if (item.court) children.push(rtlParagraph(`المحكمة: ${item.court}`));
-  children.push(rtlParagraph(`العميل: ${item.client.name}`));
-  if (item.opposingParty) children.push(rtlParagraph(`الطرف الآخر: ${item.opposingParty}`));
+  // فقرة افتتاحية تدمج بيانات القضية داخل نص المذكرة
+  const opening =
+    `يتقدم الموكل / ${item.client.name} بهذه ${docTitle}` +
+    (item.opposingParty ? ` في مواجهة / ${item.opposingParty}` : "") +
+    `، وذلك في القضية رقم (${item.caseNumber})` +
+    (item.court ? ` المنظورة أمام ${item.court}` : "") +
+    `، للأسباب الآتية:`;
+  children.push(rtlParagraph(opening, { spacingAfter: 300 }));
 
-  children.push(new Paragraph({ text: "", spacing: { after: 300 } }));
+  renderSection(children, "أولاً: الوقائع", facts);
+  renderSection(children, "ثانياً: الأسانيد القانونية", legalGrounds);
+  renderSection(children, "ثالثاً: الطلبات", requests);
 
-  // نص المستند
-  const paragraphs = bodyText.split("\n").filter((p) => p.trim().length > 0);
-  if (paragraphs.length === 0) {
-    children.push(rtlParagraph("—"));
-  } else {
-    for (const p of paragraphs) {
-      children.push(rtlParagraph(p, { spacingAfter: 200 }));
-    }
-  }
-
-  children.push(new Paragraph({ text: "", spacing: { after: 600 } }));
+  children.push(new Paragraph({ text: "", spacing: { after: 400 } }));
+  children.push(rtlParagraph("وتفضلوا بقبول فائق الاحترام والتقدير.", { spacingAfter: 400 }));
   children.push(rtlParagraph(`المحامي: ${item.lawyer?.name ?? "—"}`, { alignment: AlignmentType.LEFT }));
 
   const doc = new Document({
