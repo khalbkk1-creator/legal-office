@@ -17,6 +17,7 @@ export default function NewCasePage() {
     caseNumber: "",
     title: "",
     caseType: "",
+    appealCategory: "REGULAR",
     court: "",
     opposingParty: "",
     claimValue: "",
@@ -73,6 +74,20 @@ export default function NewCasePage() {
         </div>
 
         <Field label="موضوع القضية" required value={form.title} onChange={(v) => update("title", v)} />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">تصنيف الاستئناف</label>
+          <select
+            value={form.appealCategory}
+            onChange={(e) => update("appealCategory", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="REGULAR">عادية (استئناف 30 يوم)</option>
+            <option value="EXECUTION">تنفيذ (استئناف 10 أيام)</option>
+            <option value="URGENT">مستعجلة (استئناف 10 أيام)</option>
+          </select>
+          <p className="text-xs text-gray-400 mt-1">يُستخدم لاحتساب موعد الاستئناف تلقائياً عند تسجيل حكم نهائي.</p>
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>

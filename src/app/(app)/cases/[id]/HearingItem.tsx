@@ -11,6 +11,7 @@ type Hearing = {
   roundNumber: number | null;
   notes: string | null;
   outcome: string | null;
+  isFinalRuling: boolean;
   reportUrl: string | null;
   reportName: string | null;
 };
@@ -35,9 +36,10 @@ export default function HearingItem({
     roundNumber: hearing.roundNumber?.toString() ?? "",
     notes: hearing.notes ?? "",
     outcome: hearing.outcome ?? "",
+    isFinalRuling: hearing.isFinalRuling,
   });
 
-  function update(field: string, value: string) {
+  function update(field: string, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
@@ -138,6 +140,21 @@ export default function HearingItem({
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+
+          <label className="flex items-start gap-2 text-sm text-gray-700 bg-amber-50 rounded-lg p-3">
+            <input
+              type="checkbox"
+              checked={form.isFinalRuling}
+              onChange={(e) => update("isFinalRuling", e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              هذا حكم نهائي — احسب موعد الاستئناف تلقائياً عند الحفظ
+              <span className="block text-xs text-gray-400 mt-0.5">
+                (حسب تصنيف القضية: {form.date && "10 أيام لقضايا التنفيذ/المستعجلة، 30 يوم لباقي القضايا"})
+              </span>
+            </span>
+          </label>
 
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 

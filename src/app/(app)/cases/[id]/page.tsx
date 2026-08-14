@@ -13,6 +13,12 @@ import Timeline, { TimelineEvent } from "@/components/Timeline";
 import CaseMessages from "./CaseMessages";
 import TimeEntries from "./TimeEntries";
 
+const appealCategoryLabels: Record<string, string> = {
+  REGULAR: "عادية (30 يوم)",
+  EXECUTION: "تنفيذ (10 أيام)",
+  URGENT: "مستعجلة (10 أيام)",
+};
+
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
   UNDER_APPROVAL: { label: "تحت الاعتماد", color: "bg-purple-50 text-purple-700" },
@@ -147,6 +153,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         </InfoCard>
         <InfoCard title="بيانات القضية">
           <Row label="نوع القضية" value={item.caseType} />
+          <Row label="تصنيف الاستئناف" value={appealCategoryLabels[item.appealCategory]} />
           <Row label="المحامي المسؤول" value={item.lawyer?.name ?? "غير معيّن"} />
           <Row label="المحكمة" value={item.court ?? "—"} />
           <Row label="الطرف الآخر" value={item.opposingParty ?? "—"} />
@@ -189,6 +196,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 roundNumber: h.roundNumber,
                 notes: h.notes,
                 outcome: h.outcome,
+                isFinalRuling: h.isFinalRuling,
                 reportUrl: h.reportUrl,
                 reportName: h.reportName,
               }}

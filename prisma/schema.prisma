@@ -304,6 +304,14 @@ model Client {
   @@schema("public")
 }
 
+enum AppealCategory {
+  REGULAR   // عادية - 30 يوم
+  EXECUTION // تنفيذ - 10 أيام
+  URGENT    // مستعجلة - 10 أيام
+
+  @@schema("public")
+}
+
 model Case {
   id             String     @id @default(cuid())
   caseNumber     String     @unique // رقم القضية
@@ -318,6 +326,7 @@ model Case {
   openedAt       DateTime   @default(now())
   closedAt       DateTime?
   appealDeadline DateTime? // آخر موعد للاستئناف
+  appealCategory AppealCategory @default(REGULAR) // تصنيف مدة الاستئناف
 
   clientId   String
   client     Client @relation(fields: [clientId], references: [id])
@@ -375,6 +384,7 @@ model Hearing {
   roundNumber  Int?     // رقم الجولة/الجلسة
   notes        String?
   outcome      String?  // نتيجة الجلسة (بعد انعقادها)
+  isFinalRuling Boolean @default(false) // هل النتيجة حكم نهائي (يبدأ احتساب الاستئناف)
   reportUrl    String?  // رابط تقرير الجلسة المرفق
   reportName   String?  // اسم ملف تقرير الجلسة
   createdAt    DateTime @default(now())

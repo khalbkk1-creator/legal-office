@@ -18,10 +18,25 @@ export async function PATCH(
   if ("roundNumber" in body) data.roundNumber = body.roundNumber ? Number(body.roundNumber) : null;
   if ("notes" in body) data.notes = body.notes || null;
   if ("outcome" in body) data.outcome = body.outcome || null;
+  if ("isFinalRuling" in body) data.isFinalRuling = !!body.isFinalRuling;
 
   const updated = await prisma.hearing.update({
     where: { id: params.hearingId },
     data,
   });
+
+  if (data.isFinalRuling === true) {
+    const caseItem = await prisma.case.findUnique({ where: { id: params.id } });
+    if (caseItem) {
+      const days = caseItem.appealCategory === "EXECUTION" || caseItem.appealCategory === "URGENT" ? 10 : 30;
+      const deadline = new Date(updated.date);
+      deadline.setDate(deadline.getDate() + days);
+      await prisma.case.update({
+        where: { id: params.id },
+        data: { appealDeadline: deadline },
+      });
+    }
+  }
+
   return NextResponse.json(updated);
 }
