@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import ConsultationActions from "./ConsultationActions";
+import ClickableRow from "@/components/ClickableRow";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: "بانتظار المراجعة", color: "bg-amber-50 text-amber-700" },
@@ -37,7 +38,7 @@ export default async function ConsultationsPage() {
           </thead>
           <tbody>
             {requests.map((r) => (
-              <tr key={r.id} className="border-t border-gray-50 hover:bg-primary-50/30 transition">
+              <ClickableRow key={r.id} href={`/consultations/${r.id}`}>
                 <td className="px-5 py-3 font-medium text-ink">{r.name}</td>
                 <td className="px-5 py-3 text-gray-600" dir="ltr">{r.phone}</td>
                 <td className="px-5 py-3 text-gray-600">
@@ -48,7 +49,7 @@ export default async function ConsultationsPage() {
                 <td className="px-5 py-3 text-gray-600 max-w-xs truncate">{r.notes || "—"}</td>
                 <td className="px-5 py-3">
                   {r.attachmentUrl ? (
-                    <a href={r.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline text-xs">
+                    <a href={r.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline text-xs" onClick={(e) => e.stopPropagation()}>
                       📄 {r.attachmentName}
                     </a>
                   ) : (
@@ -60,10 +61,10 @@ export default async function ConsultationsPage() {
                     {statusLabels[r.status].label}
                   </span>
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                   <ConsultationActions requestId={r.id} status={r.status} />
                 </td>
-              </tr>
+              </ClickableRow>
             ))}
             {requests.length === 0 && (
               <tr>

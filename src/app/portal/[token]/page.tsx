@@ -42,6 +42,7 @@ export default async function ClientPortalPage({ params }: { params: { token: st
       sales: { orderBy: { saleDate: "desc" } },
       quotations: { orderBy: { createdAt: "desc" } },
       serviceRequests: { orderBy: { createdAt: "desc" } },
+      consultationRequests: { orderBy: { requestedDate: "desc" } },
     },
   });
 
@@ -180,6 +181,45 @@ export default async function ClientPortalPage({ params }: { params: { token: st
                     </div>
                   );
                 })}
+            </div>
+          </div>
+        )}
+
+        {client.consultationRequests.length > 0 && (
+          <div>
+            <h2 className="font-bold text-ink mb-3">استشاراتك</h2>
+            <div className="space-y-3">
+              {client.consultationRequests.map((c) => (
+                <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-bold text-ink">
+                      {c.consultationType === "PHONE" ? "📞 استشارة هاتفية" : c.consultationType === "IN_PERSON" ? "🏢 استشارة حضورية" : c.consultationType === "WRITTEN" ? "✍️ استشارة كتابية" : "استشارة"}
+                    </p>
+                    <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${
+                      c.status === "CONFIRMED" ? "bg-primary-50 text-primary-700" :
+                      c.status === "DONE" ? "bg-gray-100 text-gray-600" :
+                      c.status === "CANCELLED" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {c.status === "CONFIRMED" ? "مؤكدة" : c.status === "DONE" ? "منتهية" : c.status === "CANCELLED" ? "ملغاة" : "بانتظار المراجعة"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    {new Date(c.requestedDate).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })}
+                    {" — "}
+                    {new Date(c.requestedDate).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                  {c.responseFileUrl && (
+                    <a
+                      href={c.responseFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary-700 hover:underline bg-primary-50 rounded-lg px-2 py-1 inline-block"
+                    >
+                      📄 {c.responseFileName || "رد الاستشارة"}
+                    </a>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}

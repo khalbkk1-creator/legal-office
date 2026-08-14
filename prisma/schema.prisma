@@ -100,8 +100,29 @@ model ConsultationRequest {
   attachmentName String?
   requestedDate  DateTime // تاريخ ووقت الموعد المطلوب
   status         ConsultationStatus @default(PENDING)
+  consultationType String? // PHONE / IN_PERSON / WRITTEN
   serviceRequestId String? // مرجع طلب الخدمة الأصلي إن وجد
+  clientId       String?
+  client         Client?  @relation(fields: [clientId], references: [id])
+  saleId         String?  @unique
+  sale           Sale?    @relation(fields: [saleId], references: [id])
+  responseFileUrl  String? // ملف الرد للاستشارة الكتابية
+  responseFileName String?
   createdAt      DateTime           @default(now())
+
+  noteLog ConsultationNote[]
+
+  @@schema("public")
+}
+
+model ConsultationNote {
+  id                   String              @id @default(cuid())
+  consultationRequestId String
+  consultationRequest  ConsultationRequest @relation(fields: [consultationRequestId], references: [id], onDelete: Cascade)
+  authorId             String?
+  author               User?               @relation(fields: [authorId], references: [id])
+  note                 String
+  createdAt            DateTime            @default(now())
 
   @@schema("public")
 }
@@ -265,6 +286,7 @@ model Sale {
 
   createdAt DateTime @default(now())
   timeEntries TimeEntry[]
+  consultationRequest ConsultationRequest?
 
   @@schema("public")
 }
@@ -285,6 +307,7 @@ model User {
   quotations    Quotation[]
   expenses      Expense[]
   timeEntries   TimeEntry[]
+  consultationNotes ConsultationNote[]
 
   @@schema("public")
 }
@@ -305,6 +328,7 @@ model Client {
   sales Sale[]
   quotations Quotation[]
   serviceRequests ServiceRequest[]
+  consultationRequests ConsultationRequest[]
 
   @@schema("public")
 }

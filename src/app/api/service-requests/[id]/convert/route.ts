@@ -3,6 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+async function nextInvoiceNumber() {
+  const year = new Date().getFullYear();
+  const count = await prisma.sale.count({
+    where: { invoiceNumber: { startsWith: `INV-${year}-` } },
+  });
+  const next = (count + 1).toString().padStart(4, "0");
+  return `INV-${year}-${next}`;
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
@@ -74,6 +83,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       requestedDate: request.requestedDate ?? new Date(),
       status: "CONFIRMED",
       serviceRequestId: request.id,
+      clientId: request.clientId,
+      consultationType: request.consultationType,
     },
   });
 
@@ -82,5 +93,32 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     data: { status: "CONVERTED", convertedConsultationId: consultation.id },
   });
 
-  return NextResponse.json({ ...updated, destination: "consultation", destinationId: consultation.id });
+  let saleId: string | null = null;
+  if (request.estimatedCost && request.estimatedCost > 0) {
+    const amount = request.estimatedCost;
+    const vatAmount = Math.round(amount * 0.15 * 100) / 100;
+    const totalAmount = amount + vatAmount;
+    const invoiceNumber = await nextInvoiceNumber();
+    const user = session.user as any;
+
+    const sale = await prisma.sale.create({
+      data: {
+        invoiceNumber,
+        clientId: request.clientId,
+        description: typeLabel ? `أتعاب ${typeLabel}` : "أتعاب استشارة",
+        amount,
+        applyVat: true,
+        vatAmount,
+        totalAmount,
+        createdById: user.id,
+      },
+    });
+    saleId = sale.id;
+    await prisma.consultationRequest.update({
+      where: { id: consultation.id },
+      data: { saleId: sale.id },
+    });
+  }
+
+  return NextResponse.json({ ...updated, destination: "consultation", destinationId: consultation.id, saleId });
 }
