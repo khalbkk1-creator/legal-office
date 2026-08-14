@@ -21,6 +21,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({
     name: "",
     phone: "",
+    idNumber: "",
     email: "",
     notes: "",
     requestType: "CONSULTATION",
@@ -151,6 +152,17 @@ export default function RegisterPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهوية *</label>
+            <input
+              required
+              value={form.idNumber}
+              onChange={(e) => update("idNumber", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              dir="ltr"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني (اختياري)</label>
             <input
               type="email"
@@ -235,12 +247,14 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {form.requestType === "CONSULTATION" ? "تفاصيل الاستشارة (اختياري)" : "تفاصيل القضية (اختياري)"}
+              {form.requestType === "CONSULTATION" ? "شرح تفاصيل الاستشارة *" : "شرح تفاصيل القضية *"}
             </label>
             <textarea
+              required
               value={form.notes}
               onChange={(e) => update("notes", e.target.value)}
               rows={3}
+              placeholder="اكتب شرحاً واضحاً لطلبك حتى نقدر نراجعه بدقة..."
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
           </div>

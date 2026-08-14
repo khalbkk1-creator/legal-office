@@ -6,12 +6,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const name = (body.name || "").trim();
   const phone = (body.phone || "").trim();
+  const idNumber = (body.idNumber || "").trim();
   const email = (body.email || "").trim();
   const notes = (body.notes || "").trim();
   const requestType = body.requestType === "CASE" ? "CASE" : "CONSULTATION";
 
-  if (!name || !phone) {
-    return NextResponse.json({ error: "الاسم والجوال مطلوبان" }, { status: 400 });
+  if (!name || !phone || !idNumber) {
+    return NextResponse.json({ error: "الاسم والجوال ورقم الهوية مطلوبة" }, { status: 400 });
+  }
+  if (!notes) {
+    return NextResponse.json({ error: "شرح تفاصيل الطلب مطلوب" }, { status: 400 });
   }
 
   const accessToken = crypto.randomBytes(24).toString("base64url");
@@ -20,8 +24,9 @@ export async function POST(req: NextRequest) {
     data: {
       name,
       phone,
+      idNumber,
       email: email || undefined,
-      notes: notes || undefined,
+      notes,
       accessToken,
     },
   });
