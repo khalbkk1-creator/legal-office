@@ -162,6 +162,8 @@ model ServiceRequest {
   notes                   String?
   status                  ServiceRequestStatus @default(NEW)
   requestedCategoryIds    String[]             @default([])
+  clarificationRequest    String? // طلب المحامي من العميل (توضيح إضافي)
+  clientReply             String? // رد العميل على طلب التوضيح
   consultationType        String? // PHONE / IN_PERSON / WRITTEN
   requestedDate           DateTime? // تاريخ ووقت الاستشارة المطلوب
   durationMinutes         Int? // مدة الاستشارة بالدقائق
@@ -232,6 +234,9 @@ model OfficeSettings {
   phoneConsultationRate    Float? // سعر ساعة الاستشارة الهاتفية
   inPersonConsultationRate Float? // سعر ساعة الاستشارة الحضورية
   writtenConsultationRate  Float? // سعر ساعة الاستشارة الكتابية
+  consultationDays      Int[]    @default([0,1,2,3,4]) // أيام توفر الاستشارات (0=أحد...6=سبت)
+  consultationStartTime String? // وقت بداية الحجز، مثال "09:00"
+  consultationEndTime   String? // وقت نهاية الحجز، مثال "17:00"
   updatedAt     DateTime @updatedAt
 
   @@schema("public")

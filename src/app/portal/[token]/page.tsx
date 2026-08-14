@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import QuoteResponse from "./QuoteResponse";
 import PortalUpload from "./PortalUpload";
 import ServiceRequestUpload from "./ServiceRequestUpload";
+import ClarificationReply from "./ClarificationReply";
 import PortalMessages from "./PortalMessages";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -162,10 +163,20 @@ export default async function ClientPortalPage({ params }: { params: { token: st
                   const reqCategories = allCategories.filter((c) => r.requestedCategoryIds.includes(c.id));
                   return (
                     <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <p className="text-sm font-medium text-ink mb-2">
-                        المطلوب: {reqCategories.map((c) => c.name).join("، ") || "مستندات إضافية"}
-                      </p>
-                      <ServiceRequestUpload token={params.token} requestId={r.id} categories={reqCategories} />
+                      {reqCategories.length > 0 && (
+                        <p className="text-sm font-medium text-ink mb-2">
+                          المستندات المطلوبة: {reqCategories.map((c) => c.name).join("، ")}
+                        </p>
+                      )}
+                      {reqCategories.length > 0 && (
+                        <ServiceRequestUpload token={params.token} requestId={r.id} categories={reqCategories} />
+                      )}
+                      {r.clarificationRequest && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-ink mb-1">📩 {r.clarificationRequest}</p>
+                          <ClarificationReply token={params.token} requestId={r.id} existingReply={r.clientReply} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}

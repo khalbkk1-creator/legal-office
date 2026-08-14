@@ -15,6 +15,8 @@ export default function ServiceRequestActions({
   categories,
   documents,
   quotation,
+  clarificationRequest,
+  clientReply,
 }: {
   requestId: string;
   requestType: string;
@@ -23,10 +25,15 @@ export default function ServiceRequestActions({
   categories: Category[];
   documents: Doc[];
   quotation: Quote;
+  clarificationRequest: string | null;
+  clientReply: string | null;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(requestedCategoryIds);
   const [savingCategories, setSavingCategories] = useState(false);
+
+  const [clarificationText, setClarificationText] = useState("");
+  const [sendingClarification, setSendingClarification] = useState(false);
 
   const [quoteDescription, setQuoteDescription] = useState("");
   const [quoteAmount, setQuoteAmount] = useState("");
@@ -49,6 +56,19 @@ export default function ServiceRequestActions({
       body: JSON.stringify({ requestedCategoryIds: selected }),
     });
     setSavingCategories(false);
+    router.refresh();
+  }
+
+  async function sendClarification() {
+    if (!clarificationText.trim()) return;
+    setSendingClarification(true);
+    await fetch(`/api/service-requests/${requestId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clarificationRequest: clarificationText, status: "DOCS_REQUESTED" }),
+    });
+    setSendingClarification(false);
+    setClarificationText("");
     router.refresh();
   }
 
@@ -91,9 +111,46 @@ export default function ServiceRequestActions({
   const quoteAccepted = quotation?.status === "ACCEPTED";
   const showConvert = requestType === "CASE" ? quoteAccepted && status !== "CONVERTED" : status !== "CONVERTED";
 
+  const clarificationBlock = (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <h2 className="font-bold text-ink mb-3">طلب توضيح أو مستند إضافي من العميل</h2>
+
+      {clarificationRequest && (
+        <div className="bg-amber-50 rounded-lg p-3 mb-3 text-sm">
+          <p className="text-amber-800 font-medium mb-1">آخر طلب أُرسل للعميل:</p>
+          <p className="text-amber-800">{clarificationRequest}</p>
+        </div>
+      )}
+
+      {clientReply && (
+        <div className="bg-primary-50 rounded-lg p-3 mb-3 text-sm">
+          <p className="text-primary-800 font-medium mb-1">رد العميل:</p>
+          <p className="text-primary-800">{clientReply}</p>
+        </div>
+      )}
+
+      <textarea
+        value={clarificationText}
+        onChange={(e) => setClarificationText(e.target.value)}
+        rows={2}
+        placeholder="اكتب ما تحتاجه من العميل (توضيح، معلومة إضافية...)"
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm mb-2"
+      />
+      <button
+        onClick={sendClarification}
+        disabled={sendingClarification}
+        className="text-sm bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-4 py-2 disabled:opacity-60"
+      >
+        {sendingClarification ? "جاري الإرسال..." : "إرسال طلب التوضيح للعميل"}
+      </button>
+    </div>
+  );
+
   if (requestType === "CONSULTATION") {
     return (
       <div className="space-y-6">
+        {clarificationBlock}
+
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
         {showConvert && (
@@ -114,6 +171,7 @@ export default function ServiceRequestActions({
         {convertResult && (
           <div className="bg-primary-50 border border-primary-100 rounded-2xl p-6 text-sm text-primary-800">
             تم التأكيد بنجاح! راجع الموعد من شاشة طلبات الاستشارة.
+            {(convertResult as any).saleId && " تم إنشاء فاتورة للعميل تلقائياً."}
           </div>
         )}
       </div>
@@ -147,6 +205,8 @@ export default function ServiceRequestActions({
           {savingCategories ? "جاري الحفظ..." : "إرسال طلب المستندات للعميل"}
         </button>
       </div>
+
+      {clarificationBlock}
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-3">المستندات المرفوعة ({documents.length})</h2>

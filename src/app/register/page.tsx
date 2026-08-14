@@ -18,6 +18,11 @@ export default function RegisterPage() {
     IN_PERSON: 0,
     WRITTEN: 0,
   });
+  const [availability, setAvailability] = useState<{ days: number[]; startTime: string; endTime: string }>({
+    days: [0, 1, 2, 3, 4],
+    startTime: "09:00",
+    endTime: "17:00",
+  });
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -44,6 +49,11 @@ export default function RegisterPage() {
           IN_PERSON: d.inPersonConsultationRate || 0,
           WRITTEN: d.writtenConsultationRate || 0,
         });
+        setAvailability({
+          days: Array.isArray(d.consultationDays) ? d.consultationDays : [0, 1, 2, 3, 4],
+          startTime: d.consultationStartTime || "09:00",
+          endTime: d.consultationEndTime || "17:00",
+        });
       })
       .catch(() => {});
   }, []);
@@ -52,11 +62,33 @@ export default function RegisterPage() {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+  const dateInvalid =
+    form.date && !availability.days.includes(new Date(form.date + "T00:00:00").getDay());
+
+  const timeOptions: string[] = [];
+  {
+    const [sh, sm] = availability.startTime.split(":").map(Number);
+    const [eh, em] = availability.endTime.split(":").map(Number);
+    let cur = sh * 60 + (sm || 0);
+    const end = eh * 60 + (em || 0);
+    while (cur < end) {
+      const h = Math.floor(cur / 60).toString().padStart(2, "0");
+      const m = (cur % 60).toString().padStart(2, "0");
+      timeOptions.push(`${h}:${m}`);
+      cur += 30;
+    }
+  }
+
   const selectedRate = rates[form.consultationType as keyof typeof rates] || 0;
   const estimatedCost = selectedRate * (Number(form.durationHours) || 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (form.requestType === "CONSULTATION" && dateInvalid) {
+      setError(`المكتب يستقبل حجوزات الاستشارة أيام: ${availability.days.map((d) => dayNames[d]).join("، ")} فقط`);
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -206,6 +238,7 @@ export default function RegisterPage() {
                   <input
                     required
                     type="date"
+                    min={new Date().toISOString().slice(0, 10)}
                     value={form.date}
                     onChange={(e) => update("date", e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
@@ -213,15 +246,26 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">الوقت المناسب *</label>
-                  <input
+                  <select
                     required
-                    type="time"
                     value={form.time}
                     onChange={(e) => update("time", e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
+                  >
+                    <option value="">اختر وقتاً</option>
+                    {timeOptions.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
+
+              <p className="text-xs text-gray-400 -mt-2">
+                المكتب يستقبل الحجوزات: {availability.days.map((d) => dayNames[d]).join("، ")} — من {availability.startTime} إلى {availability.endTime}
+              </p>
+              {dateInvalid && (
+                <p className="text-xs text-red-600 -mt-2">هذا اليوم غير متاح للحجز، اختر يوماً آخر من الأيام المذكورة أعلاه.</p>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">المدة المطلوبة (ساعات) *</label>

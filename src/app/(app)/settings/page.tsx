@@ -30,7 +30,10 @@ export default function SettingsPage() {
     phoneConsultationRate: "",
     inPersonConsultationRate: "",
     writtenConsultationRate: "",
+    consultationStartTime: "",
+    consultationEndTime: "",
   });
+  const [consultationDays, setConsultationDays] = useState<number[]>([0, 1, 2, 3, 4]);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -46,10 +49,17 @@ export default function SettingsPage() {
           phoneConsultationRate: data.phoneConsultationRate?.toString() ?? "",
           inPersonConsultationRate: data.inPersonConsultationRate?.toString() ?? "",
           writtenConsultationRate: data.writtenConsultationRate?.toString() ?? "",
+          consultationStartTime: data.consultationStartTime ?? "",
+          consultationEndTime: data.consultationEndTime ?? "",
         });
+        setConsultationDays(Array.isArray(data.consultationDays) ? data.consultationDays : [0, 1, 2, 3, 4]);
         setLoading(false);
       });
   }, []);
+
+  function toggleDay(day: number) {
+    setConsultationDays((d) => (d.includes(day) ? d.filter((x) => x !== day) : [...d, day].sort()));
+  }
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -64,7 +74,7 @@ export default function SettingsPage() {
     const res = await fetch("/api/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, consultationDays }),
     });
 
     setSaving(false);
@@ -264,6 +274,48 @@ export default function SettingsPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">أيام استقبال حجوزات الاستشارة</label>
+            <div className="flex flex-wrap gap-2">
+              {["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"].map((label, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => toggleDay(i)}
+                  className={`text-xs rounded-lg px-3 py-1.5 border transition ${
+                    consultationDays.includes(i)
+                      ? "bg-primary-700 border-primary-700 text-white"
+                      : "border-gray-300 text-gray-600"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">من الساعة</label>
+              <input
+                type="time"
+                value={form.consultationStartTime}
+                onChange={(e) => update("consultationStartTime", e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">إلى الساعة</label>
+              <input
+                type="time"
+                value={form.consultationEndTime}
+                onChange={(e) => update("consultationEndTime", e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 -mt-2">هذي الأوقات هي اللي تظهر للعميل عند حجز الاستشارة من صفحة التسجيل.</p>
 
           <button
             type="submit"

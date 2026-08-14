@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import ClickableRow from "./ClickableRow";
 
 const typeLabels: Record<string, string> = { CASE: "قضية", CONSULTATION: "استشارة" };
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -40,11 +40,9 @@ export default async function ServiceRequestsPage() {
             {requests.map((r) => {
               const status = r.quotation?.status === "ACCEPTED" && r.status !== "CONVERTED" ? "ACCEPTED" : r.status;
               return (
-                <tr key={r.id} className="border-t border-gray-50 hover:bg-primary-50/30 transition">
+                <ClickableRow key={r.id} href={`/service-requests/${r.id}`}>
                   <td className="px-5 py-3">
-                    <Link href={`/service-requests/${r.id}`} className="font-medium text-primary-700 hover:underline">
-                      {r.client.name}
-                    </Link>
+                    <span className="font-medium text-primary-700">{r.client.name}</span>
                     <p className="text-xs text-gray-400" dir="ltr">{r.client.phone}</p>
                   </td>
                   <td className="px-5 py-3 text-gray-600">{typeLabels[r.requestType]}</td>
@@ -55,7 +53,7 @@ export default async function ServiceRequestsPage() {
                       {statusLabels[status].label}
                     </span>
                   </td>
-                </tr>
+                </ClickableRow>
               );
             })}
             {requests.length === 0 && (

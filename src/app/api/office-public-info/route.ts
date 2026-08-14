@@ -9,5 +9,8 @@ export async function GET() {
     phoneConsultationRate: settings?.phoneConsultationRate ?? null,
     inPersonConsultationRate: settings?.inPersonConsultationRate ?? null,
     writtenConsultationRate: settings?.writtenConsultationRate ?? null,
+    consultationDays: settings?.consultationDays ?? [0, 1, 2, 3, 4],
+    consultationStartTime: settings?.consultationStartTime ?? null,
+    consultationEndTime: settings?.consultationEndTime ?? null,
   });
 }

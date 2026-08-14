@@ -46,6 +46,9 @@ export async function PATCH(req: NextRequest) {
   if ("writtenConsultationRate" in body) {
     data.writtenConsultationRate = body.writtenConsultationRate ? Number(body.writtenConsultationRate) : null;
   }
+  if ("consultationDays" in body) data.consultationDays = body.consultationDays;
+  if ("consultationStartTime" in body) data.consultationStartTime = body.consultationStartTime || null;
+  if ("consultationEndTime" in body) data.consultationEndTime = body.consultationEndTime || null;
 
   const updated = await prisma.officeSettings.update({
     where: { id: settings.id },

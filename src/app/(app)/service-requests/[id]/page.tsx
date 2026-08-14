@@ -82,6 +82,8 @@ export default async function ServiceRequestDetailPage({ params }: { params: { i
         categories={categories}
         documents={request.documents}
         quotation={request.quotation}
+        clarificationRequest={request.clarificationRequest}
+        clientReply={request.clientReply}
       />
     </div>
   );

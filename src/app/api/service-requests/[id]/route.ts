@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data.requestedCategoryIds = body.requestedCategoryIds;
     data.status = "DOCS_REQUESTED";
   }
+  if ("clarificationRequest" in body) data.clarificationRequest = body.clarificationRequest;
   if ("status" in body) data.status = body.status;
 
   const updated = await prisma.serviceRequest.update({
