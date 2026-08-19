@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import MarkPaidButton from "@/app/(app)/sales/MarkPaidButton";
 import QuoteActions from "@/app/(app)/quotes/QuoteActions";
+import DeleteExpenseButton from "@/app/(app)/expenses/DeleteExpenseButton";
 
 type Sale = {
   id: string;
@@ -26,6 +27,15 @@ type Quote = {
   case: { id: string; caseNumber: string } | null;
 };
 
+type Expense = {
+  id: string;
+  description: string;
+  amount: number;
+  expenseDate: string;
+  category: { name: string } | null;
+  case: { id: string; caseNumber: string } | null;
+};
+
 const saleStatusLabels: Record<string, { label: string; color: string }> = {
   PAID: { label: "مدفوعة", color: "bg-primary-50 text-primary-700" },
   UNPAID: { label: "غير مدفوعة", color: "bg-red-50 text-red-600" },
@@ -43,36 +53,44 @@ export default function BillingScreen({
   initialTab,
   sales,
   quotes,
+  expenses,
   summary,
+  expenseSummary,
 }: {
-  initialTab: "sales" | "quotes";
+  initialTab: "sales" | "quotes" | "expenses";
   sales: Sale[];
   quotes: Quote[];
+  expenses: Expense[];
   summary: { totalThisMonth: number; totalOutstanding: number; topCases: { title: string; total: number }[] };
+  expenseSummary: { totalThisMonth: number; topCategories: [string, number][] };
 }) {
-  const [tab, setTab] = useState<"sales" | "quotes">(initialTab);
+  const [tab, setTab] = useState<"sales" | "quotes" | "expenses">(initialTab);
+
+  const titles: Record<string, string> = {
+    sales: "فواتير الخدمات والإيرادات",
+    quotes: "عروض قبل تحويلها إلى فواتير",
+    expenses: "مصاريف المكتب التشغيلية",
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">المبيعات وعروض الأسعار</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {tab === "sales" ? "فواتير الخدمات والإيرادات" : "عروض قبل تحويلها إلى فواتير"}
-          </p>
+          <h1 className="text-2xl font-bold text-ink">المحاسبة</h1>
+          <p className="text-gray-500 text-sm mt-1">{titles[tab]}</p>
         </div>
         <Link
-          href={tab === "sales" ? "/sales/new" : "/quotes/new"}
+          href={tab === "sales" ? "/sales/new" : tab === "quotes" ? "/quotes/new" : "/expenses/new"}
           className="bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
         >
-          {tab === "sales" ? "+ فاتورة جديدة" : "+ عرض سعر جديد"}
+          {tab === "sales" ? "+ فاتورة جديدة" : tab === "quotes" ? "+ عرض سعر جديد" : "+ مصروف جديد"}
         </Link>
       </div>
 
-      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit overflow-x-auto max-w-full">
         <button
           onClick={() => setTab("sales")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
             tab === "sales" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
           }`}
         >
@@ -80,11 +98,19 @@ export default function BillingScreen({
         </button>
         <button
           onClick={() => setTab("quotes")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
             tab === "quotes" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
           }`}
         >
           📝 عروض الأسعار
+        </button>
+        <button
+          onClick={() => setTab("expenses")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+            tab === "expenses" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          💸 المصاريف
         </button>
       </div>
 
@@ -234,6 +260,78 @@ export default function BillingScreen({
             </tbody>
           </table>
         </div>
+      )}
+
+      {tab === "expenses" && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <p className="text-xs text-gray-400 mb-1">مصاريف هذا الشهر</p>
+              <p className="text-2xl font-bold text-red-600">{expenseSummary.totalThisMonth.toLocaleString()} ر.س</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <p className="text-xs text-gray-400 mb-2">أعلى بنود المصروفات هذا الشهر</p>
+              {expenseSummary.topCategories.length === 0 ? (
+                <p className="text-xs text-gray-400">لا توجد بيانات بعد</p>
+              ) : (
+                <div className="space-y-1">
+                  {expenseSummary.topCategories.map(([name, total]) => (
+                    <div key={name} className="flex justify-between text-xs">
+                      <span className="text-gray-600">{name}</span>
+                      <span className="text-ink font-medium">{total.toLocaleString()} ر.س</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs">
+                <tr>
+                  <th className="text-right px-5 py-3 font-medium">التاريخ</th>
+                  <th className="text-right px-5 py-3 font-medium">الوصف</th>
+                  <th className="text-right px-5 py-3 font-medium">التصنيف</th>
+                  <th className="text-right px-5 py-3 font-medium">القضية</th>
+                  <th className="text-right px-5 py-3 font-medium">المبلغ</th>
+                  <th className="text-right px-5 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((e) => (
+                  <tr key={e.id} className="border-t border-gray-50 hover:bg-red-50/20 transition">
+                    <td className="px-5 py-3 text-gray-600">
+                      {new Date(e.expenseDate).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })}
+                    </td>
+                    <td className="px-5 py-3 text-ink font-medium">{e.description}</td>
+                    <td className="px-5 py-3 text-gray-600">{e.category?.name ?? "—"}</td>
+                    <td className="px-5 py-3 text-gray-600">
+                      {e.case ? (
+                        <Link href={`/cases/${e.case.id}`} className="text-primary-700 hover:underline">
+                          {e.case.caseNumber}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-red-600 font-medium">{e.amount.toLocaleString()} ر.س</td>
+                    <td className="px-5 py-3">
+                      <DeleteExpenseButton expenseId={e.id} />
+                    </td>
+                  </tr>
+                ))}
+                {expenses.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
+                      لا توجد مصاريف مسجّلة بعد.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
