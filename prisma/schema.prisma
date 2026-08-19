@@ -78,6 +78,9 @@ model Quotation {
   createdAt DateTime @default(now())
   serviceRequest ServiceRequest?
 
+  @@index([clientId])
+  @@index([caseId])
+  @@index([status])
   @@schema("public")
 }
 
@@ -112,6 +115,9 @@ model ConsultationRequest {
 
   noteLog ConsultationNote[]
 
+  @@index([clientId])
+  @@index([status])
+  @@index([requestedDate])
   @@schema("public")
 }
 
@@ -124,6 +130,7 @@ model ConsultationNote {
   note                 String
   createdAt            DateTime            @default(now())
 
+  @@index([consultationRequestId])
   @@schema("public")
 }
 
@@ -153,6 +160,9 @@ model Expense {
 
   createdAt DateTime @default(now())
 
+  @@index([caseId])
+  @@index([categoryId])
+  @@index([expenseDate])
   @@schema("public")
 }
 
@@ -197,6 +207,8 @@ model ServiceRequest {
 
   documents ServiceRequestDocument[]
 
+  @@index([clientId])
+  @@index([status])
   @@schema("public")
 }
 
@@ -211,6 +223,8 @@ model ServiceRequestDocument {
   fileSize         Int?
   createdAt        DateTime       @default(now())
 
+  @@index([serviceRequestId])
+  @@index([categoryId])
   @@schema("public")
 }
 
@@ -222,6 +236,7 @@ model CaseMessage {
   message    String
   createdAt  DateTime @default(now())
 
+  @@index([caseId])
   @@schema("public")
 }
 
@@ -240,6 +255,8 @@ model TimeEntry {
   entryDate   DateTime @default(now())
   createdAt   DateTime @default(now())
 
+  @@index([caseId])
+  @@index([billed])
   @@schema("public")
 }
 
@@ -288,6 +305,10 @@ model Sale {
   timeEntries TimeEntry[]
   consultationRequest ConsultationRequest?
 
+  @@index([clientId])
+  @@index([caseId])
+  @@index([paymentStatus])
+  @@index([saleDate])
   @@schema("public")
 }
 
@@ -330,6 +351,7 @@ model Client {
   serviceRequests ServiceRequest[]
   consultationRequests ConsultationRequest[]
 
+  @@index([phone])
   @@schema("public")
 }
 
@@ -375,6 +397,10 @@ model Case {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([clientId])
+  @@index([lawyerId])
+  @@index([status])
+  @@index([appealDeadline])
   @@schema("public")
 }
 
@@ -401,6 +427,8 @@ model CaseDocument {
   category     DocumentCategory? @relation(fields: [categoryId], references: [id])
   createdAt    DateTime @default(now())
 
+  @@index([caseId])
+  @@index([categoryId])
   @@schema("public")
 }
 
@@ -418,6 +446,8 @@ model Hearing {
   reportName   String?  // اسم ملف تقرير الجلسة
   createdAt    DateTime @default(now())
 
+  @@index([caseId])
+  @@index([date])
   @@schema("public")
 }
 
@@ -430,5 +460,6 @@ model CaseUpdate {
   note      String
   createdAt DateTime @default(now())
 
+  @@index([caseId])
   @@schema("public")
 }
