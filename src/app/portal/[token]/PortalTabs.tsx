@@ -29,7 +29,7 @@ const paymentLabels: Record<string, { label: string; color: string }> = {
   PARTIAL: { label: "مدفوعة جزئياً", color: "bg-amber-50 text-amber-700" },
 };
 
-type Tab = "cases" | "consultations" | "requests" | "quotes" | "invoices";
+type Screen = "menu" | "cases" | "consultations" | "requests" | "quotes" | "invoices";
 
 export default function PortalTabs({
   token,
@@ -52,12 +52,12 @@ export default function PortalTabs({
   rates: { PHONE: number; IN_PERSON: number; WRITTEN: number };
   availability: { days: number[]; startTime: string; endTime: string };
 }) {
-  const [tab, setTab] = useState<Tab>("cases");
+  const [screen, setScreen] = useState<Screen>("menu");
 
   const pendingRequests = serviceRequests.filter((r) => r.status !== "CONVERTED");
   const docsNeeded = serviceRequests.filter((r) => r.status === "DOCS_REQUESTED" || r.status === "DOCS_SUBMITTED");
 
-  const tabs: { key: Tab; label: string; icon: string; badge?: number }[] = [
+  const menuItems: { key: Screen; label: string; icon: string; badge?: number }[] = [
     { key: "cases", label: "قضاياك", icon: "📁", badge: cases.length || undefined },
     { key: "consultations", label: "استشاراتك", icon: "💬", badge: consultationRequests.length || undefined },
     { key: "requests", label: "طلباتك", icon: "📋", badge: pendingRequests.length || undefined },
@@ -65,31 +65,54 @@ export default function PortalTabs({
     { key: "invoices", label: "فواتيرك", icon: "💰", badge: sales.length || undefined },
   ];
 
-  return (
-    <div>
-      <div className="flex justify-center mb-4">
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm overflow-x-auto max-w-full">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition ${
-                tab === t.key ? "bg-primary-700 text-white" : "text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              <span>{t.icon}</span>
-              {t.label}
-              {!!t.badge && (
-                <span className={`text-[10px] rounded-full px-1.5 ${tab === t.key ? "bg-white/20" : "bg-gray-100"}`}>
-                  {t.badge}
+  if (screen === "menu") {
+    return (
+      <div className="max-w-md mx-auto space-y-2">
+        {menuItems.map((item) => (
+          <button
+            key={item.key}
+            onClick={() => setScreen(item.key)}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-primary-300 hover:shadow-md transition"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{item.icon}</span>
+              <span className="font-bold text-ink">{item.label}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {!!item.badge && (
+                <span className="text-xs bg-primary-50 text-primary-700 rounded-full px-2 py-0.5 font-medium">
+                  {item.badge}
                 </span>
               )}
-            </button>
-          ))}
-        </div>
+              <span className="text-gray-300 text-lg">‹</span>
+            </div>
+          </button>
+        ))}
       </div>
+    );
+  }
 
-      {tab === "cases" && (
+  const titles: Record<Screen, string> = {
+    menu: "",
+    cases: "قضاياك",
+    consultations: "استشاراتك",
+    requests: "طلباتك",
+    quotes: "عروض الأسعار",
+    invoices: "فواتيرك",
+  };
+
+  return (
+    <div className="max-w-md mx-auto">
+      <button
+        onClick={() => setScreen("menu")}
+        className="flex items-center gap-1.5 text-sm text-primary-700 font-medium mb-4 hover:underline"
+      >
+        <span>›</span> رجوع للقائمة
+      </button>
+
+      <h2 className="text-lg font-bold text-ink mb-4 text-center">{titles[screen]}</h2>
+
+      {screen === "cases" && (
         <div className="space-y-4">
           {cases.map((c) => (
             <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -155,7 +178,7 @@ export default function PortalTabs({
         </div>
       )}
 
-      {tab === "consultations" && (
+      {screen === "consultations" && (
         <div className="space-y-3">
           {consultationRequests.map((c) => (
             <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -192,7 +215,7 @@ export default function PortalTabs({
         </div>
       )}
 
-      {tab === "requests" && (
+      {screen === "requests" && (
         <div className="space-y-6">
           <NewRequestForm token={token} rates={rates} availability={availability} />
 
@@ -259,7 +282,7 @@ export default function PortalTabs({
         </div>
       )}
 
-      {tab === "quotes" && (
+      {screen === "quotes" && (
         <div className="space-y-3">
           {quotations.map((q) => (
             <div key={q.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -278,7 +301,7 @@ export default function PortalTabs({
         </div>
       )}
 
-      {tab === "invoices" && (
+      {screen === "invoices" && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs">
