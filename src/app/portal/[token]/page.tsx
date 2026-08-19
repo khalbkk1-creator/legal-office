@@ -5,6 +5,7 @@ import PortalUpload from "./PortalUpload";
 import ServiceRequestUpload from "./ServiceRequestUpload";
 import ClarificationReply from "./ClarificationReply";
 import PortalMessages from "./PortalMessages";
+import NewRequestForm from "./NewRequestForm";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   UNDER_REVIEW: { label: "تحت الدراسة", color: "bg-blue-50 text-blue-700" },
@@ -46,14 +47,35 @@ export default async function ClientPortalPage({ params }: { params: { token: st
     },
   });
 
-  const [settings, allCategories] = await Promise.all([
+  const [settings, allCategories, upcomingHearings] = await Promise.all([
     prisma.officeSettings.findFirst(),
     prisma.documentCategory.findMany(),
+    prisma.hearing.findMany({
+      where: { case: { clientId: client?.id ?? "" }, date: { gte: new Date() } },
+      orderBy: { date: "asc" },
+      take: 3,
+      include: { case: true },
+    }),
   ]);
 
   if (!client) notFound();
 
   const totalOutstanding = client.sales.reduce((sum, s) => sum + (s.totalAmount - s.paidAmount), 0);
+  const unpaidSales = client.sales.filter((s) => s.paymentStatus !== "PAID");
+  const upcomingConsultations = client.consultationRequests
+    .filter((c) => c.status === "CONFIRMED" && new Date(c.requestedDate) >= new Date())
+    .sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime());
+
+  const rates = {
+    PHONE: settings?.phoneConsultationRate ?? 0,
+    IN_PERSON: settings?.inPersonConsultationRate ?? 0,
+    WRITTEN: settings?.writtenConsultationRate ?? 0,
+  };
+  const availability = {
+    days: settings?.consultationDays ?? [0, 1, 2, 3, 4],
+    startTime: settings?.consultationStartTime ?? "09:00",
+    endTime: settings?.consultationEndTime ?? "17:00",
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4" dir="rtl">
@@ -74,9 +96,78 @@ export default async function ClientPortalPage({ params }: { params: { token: st
           <p className="text-sm text-gray-500 mt-1">هذه صفحتك الخاصة لمتابعة قضاياك وفواتيرك ومرفقاتك.</p>
         </div>
 
-        {totalOutstanding > 0 && (
-          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-sm text-amber-800">
-            لديك مبلغ مستحق قدره <span className="font-bold">{totalOutstanding.toLocaleString()} ر.س</span>
+        {(totalOutstanding > 0 || upcomingConsultations.length > 0 || upcomingHearings.length > 0) && (
+          <div className="space-y-3">
+            {totalOutstanding > 0 && (
+              <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
+                <p className="text-sm text-red-800 font-medium mb-2">
+                  ⚠️ لديك مبلغ مستحق قدره <span className="font-bold">{totalOutstanding.toLocaleString()} ر.س</span>
+                </p>
+                <div className="space-y-1">
+                  {unpaidSales.map((s) => (
+                    <p key={s.id} className="text-xs text-red-700">
+                      {s.invoiceNumber} — {(s.totalAmount - s.paidAmount).toLocaleString()} ر.س ({s.paymentStatus === "PARTIAL" ? "مدفوعة جزئياً" : "غير مدفوعة"})
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {upcomingConsultations.length > 0 && (
+              <div className="bg-primary-50 border border-primary-100 rounded-2xl p-4">
+                <p className="text-sm text-primary-800 font-medium mb-2">📅 موعدك القادم</p>
+                {upcomingConsultations.slice(0, 2).map((c) => (
+                  <p key={c.id} className="text-xs text-primary-700">
+                    {new Date(c.requestedDate).toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" })}
+                    {" — "}
+                    {new Date(c.requestedDate).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {upcomingHearings.length > 0 && (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+                <p className="text-sm text-blue-800 font-medium mb-2">⚖️ جلسات قادمة</p>
+                {upcomingHearings.map((h) => (
+                  <p key={h.id} className="text-xs text-blue-700">
+                    {h.case.title} — {new Date(h.date).toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" })}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <NewRequestForm token={params.token} rates={rates} availability={availability} />
+
+        {client.serviceRequests.filter((r) => r.status !== "CONVERTED").length > 0 && (
+          <div>
+            <h2 className="font-bold text-ink mb-3">طلباتك الحالية</h2>
+            <div className="space-y-2">
+              {client.serviceRequests
+                .filter((r) => r.status !== "CONVERTED")
+                .map((r) => {
+                  const statusMap: Record<string, { label: string; color: string }> = {
+                    NEW: { label: "بانتظار المراجعة", color: "bg-amber-50 text-amber-700" },
+                    DOCS_REQUESTED: { label: "مطلوب منك مستندات/توضيح", color: "bg-amber-50 text-amber-700" },
+                    DOCS_SUBMITTED: { label: "بانتظار المراجعة", color: "bg-blue-50 text-blue-700" },
+                    QUOTE_SENT: { label: "عرض سعر بانتظار ردك", color: "bg-purple-50 text-purple-700" },
+                    ACCEPTED: { label: "تمت الموافقة", color: "bg-primary-50 text-primary-700" },
+                    REJECTED: { label: "مرفوض", color: "bg-red-50 text-red-600" },
+                  };
+                  const s = statusMap[r.status] ?? { label: r.status, color: "bg-gray-100 text-gray-600" };
+                  return (
+                    <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-ink">{r.requestType === "CASE" ? "طلب قضية" : "طلب استشارة"}</p>
+                        <p className="text-xs text-gray-400 truncate max-w-xs">{r.notes}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-medium shrink-0 ${s.color}`}>{s.label}</span>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         )}
 
