@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { getSystemAccountId, postJournalEntry } from "@/lib/accounting";
 
 const saleSchema = z.object({
   clientId: z.string().min(1),
@@ -65,6 +66,30 @@ export async function POST(req: NextRequest) {
     },
     include: { client: true, case: true },
   });
+
+  try {
+    const [arAccount, revenueAccount, vatAccount] = await Promise.all([
+      getSystemAccountId("1100"),
+      getSystemAccountId("4100"),
+      getSystemAccountId("2200"),
+    ]);
+    const lines = [
+      { accountId: arAccount, debit: totalAmount, description: `فاتورة ${invoiceNumber}` },
+      { accountId: revenueAccount, credit: amount, description: `فاتورة ${invoiceNumber}` },
+    ];
+    if (vatAmount > 0) {
+      lines.push({ accountId: vatAccount, credit: vatAmount, description: `ضريبة فاتورة ${invoiceNumber}` });
+    }
+    await postJournalEntry({
+      description: `فاتورة عميل — ${invoiceNumber}`,
+      sourceType: "SALE",
+      sourceId: created.id,
+      createdById: user.id,
+      lines,
+    });
+  } catch (e) {
+    console.error("Journal posting failed for sale:", e);
+  }
 
   return NextResponse.json(created, { status: 201 });
 }

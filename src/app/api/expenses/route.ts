@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { getSystemAccountId, getOrCreateExpenseAccount, postJournalEntry } from "@/lib/accounting";
 
 const expenseSchema = z.object({
   description: z.string().min(1),
@@ -47,6 +48,25 @@ export async function POST(req: NextRequest) {
     },
     include: { category: true, case: true },
   });
+
+  try {
+    const [expenseAccount, cashAccount] = await Promise.all([
+      getOrCreateExpenseAccount(created.category?.name),
+      getSystemAccountId("1010"),
+    ]);
+    await postJournalEntry({
+      description: `مصروف — ${description}`,
+      sourceType: "EXPENSE",
+      sourceId: created.id,
+      createdById: user.id,
+      lines: [
+        { accountId: expenseAccount, debit: amount, description },
+        { accountId: cashAccount, credit: amount, description },
+      ],
+    });
+  } catch (e) {
+    console.error("Journal posting failed for expense:", e);
+  }
 
   return NextResponse.json(created, { status: 201 });
 }

@@ -260,6 +260,69 @@ model TimeEntry {
   @@schema("public")
 }
 
+enum AccountType {
+  ASSET     // أصول
+  LIABILITY // التزامات
+  EQUITY    // حقوق ملكية
+  REVENUE   // إيرادات
+  EXPENSE   // مصروفات
+
+  @@schema("public")
+}
+
+model Account {
+  id       String      @id @default(cuid())
+  code     String      @unique // رقم الحساب
+  name     String
+  type     AccountType
+  parentId String?
+  parent   Account?    @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children Account[]   @relation("AccountHierarchy")
+  isSystem Boolean     @default(false) // حساب أساسي بالنظام، لا يُحذف
+  isActive Boolean     @default(true)
+  createdAt DateTime   @default(now())
+
+  journalLines JournalEntryLine[]
+
+  @@index([type])
+  @@index([parentId])
+  @@schema("public")
+}
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  entryNumber String   @unique // رقم القيد
+  date        DateTime @default(now())
+  description String
+  sourceType  String? // SALE / EXPENSE / PAYMENT / MANUAL
+  sourceId    String? // معرّف السجل المصدر إن وجد
+
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  lines     JournalEntryLine[]
+
+  @@index([date])
+  @@index([sourceType, sourceId])
+  @@schema("public")
+}
+
+model JournalEntryLine {
+  id             String       @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  debit          Float        @default(0)
+  credit         Float        @default(0)
+  description    String?
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@schema("public")
+}
+
 model OfficeSettings {
   id            String   @id @default(cuid())
   officeName    String?
@@ -329,6 +392,7 @@ model User {
   expenses      Expense[]
   timeEntries   TimeEntry[]
   consultationNotes ConsultationNote[]
+  journalEntries JournalEntry[]
 
   @@schema("public")
 }

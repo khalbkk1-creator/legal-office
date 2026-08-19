@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getSystemAccountId, postJournalEntry } from "@/lib/accounting";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -21,6 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json();
   const data: Record<string, unknown> = {};
+
+  const existing = await prisma.sale.findUnique({ where: { id: params.id } });
 
   if ("paymentStatus" in body) data.paymentStatus = body.paymentStatus;
   if ("paidAmount" in body) data.paidAmount = Number(body.paidAmount);
@@ -45,6 +48,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data,
     include: { client: true, case: true },
   });
+
+  if ("paidAmount" in body && existing) {
+    const paymentDelta = updated.paidAmount - existing.paidAmount;
+    if (paymentDelta > 0) {
+      try {
+        const session2 = session.user as any;
+        const [cashAccount, arAccount] = await Promise.all([
+          getSystemAccountId("1010"),
+          getSystemAccountId("1100"),
+        ]);
+        await postJournalEntry({
+          description: `تحصيل دفعة — فاتورة ${updated.invoiceNumber}`,
+          sourceType: "PAYMENT",
+          sourceId: updated.id,
+          createdById: session2.id,
+          lines: [
+            { accountId: cashAccount, debit: paymentDelta, description: `تحصيل ${updated.invoiceNumber}` },
+            { accountId: arAccount, credit: paymentDelta, description: `تحصيل ${updated.invoiceNumber}` },
+          ],
+        });
+      } catch (e) {
+        console.error("Journal posting failed for payment:", e);
+      }
+    }
+  }
+
   return NextResponse.json(updated);
 }
 
