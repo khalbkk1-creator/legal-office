@@ -27,6 +27,7 @@ export default function Sidebar({
     { href: "/sales", label: "عروض أسعار وفوترة", icon: "💰" },
     { href: "/expenses", label: "المصاريف", icon: "💸" },
     { href: "/finance", label: "اللوحة المالية", icon: "📊" },
+    { href: "/analytics", label: "الإحصائيات", icon: "📈" },
     ...(userRole === "PARTNER" ? [{ href: "/users", label: "المستخدمون", icon: "🔑" }] : []),
     ...(userRole === "PARTNER" ? [{ href: "/settings", label: "إعدادات المكتب", icon: "⚙️" }] : []),
   ];
