@@ -41,8 +41,15 @@ const LEVEL2_HEADERS: { code: string; name: string; type: "ASSET" | "LIABILITY" 
   { code: "1001", name: "الأصول المتداولة", type: "ASSET", parentCode: "1000" },
   { code: "1002", name: "الأصول الثابتة", type: "ASSET", parentCode: "1000" },
   { code: "2001", name: "الالتزامات المتداولة", type: "LIABILITY", parentCode: "2000" },
+  { code: "3001", name: "حقوق الملكية الأساسية", type: "EQUITY", parentCode: "3000" },
   { code: "4001", name: "إيرادات الأتعاب القانونية", type: "REVENUE", parentCode: "4000" },
   { code: "5001", name: "مصروفات تشغيلية", type: "EXPENSE", parentCode: "5000" },
+];
+
+// حسابات تفصيلية جديدة (مستوى 3) تُضاف إن ما كانت موجودة، لإكمال العمق تحت فئات كانت فاضية
+const LEVEL3_NEW_ACCOUNTS: { code: string; name: string; type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE"; parentCode: string }[] = [
+  { code: "1210", name: "أثاث ومعدات مكتبية", type: "ASSET", parentCode: "1002" },
+  { code: "1220", name: "أجهزة حاسوب وبرمجيات", type: "ASSET", parentCode: "1002" },
 ];
 
 // الحسابات الحالية اللي ننقلها لتصير تحت مستوى 2 الجديد (بدل ما تكون مباشرة تحت المستوى 1)
@@ -53,6 +60,8 @@ const RELOCATE_TO_LEVEL2: { code: string; newParentCode: string }[] = [
   { code: "2100", newParentCode: "2001" }, // ذمم الموردين
   { code: "2200", newParentCode: "2001" }, // ضريبة القيمة المضافة المستحقة
   { code: "4100", newParentCode: "4001" }, // إيرادات أتعاب قانونية
+  { code: "3100", newParentCode: "3001" }, // رأس المال
+  { code: "3200", newParentCode: "3001" }, // الأرباح المرحلة
 ];
 
 export async function upgradeChartHierarchy() {
@@ -70,6 +79,16 @@ export async function upgradeChartHierarchy() {
       data: { code: h.code, name: h.name, type: h.type, parentId: parent.id, isSystem: true },
     });
     byCode[h.code] = created;
+  }
+
+  for (const d of LEVEL3_NEW_ACCOUNTS) {
+    if (byCode[d.code]) continue;
+    const parent = byCode[d.parentCode];
+    if (!parent) continue;
+    const created = await prisma.account.create({
+      data: { code: d.code, name: d.name, type: d.type, parentId: parent.id },
+    });
+    byCode[d.code] = created;
   }
 
   // ينقل كل حساب مصروف فرعي تحت 5000 مباشرة (غير 5001 نفسه) ليصير تحت 5001
