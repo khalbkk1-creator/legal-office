@@ -36,6 +36,66 @@ export async function ensureChartOfAccounts() {
   }
 }
 
+// يضيف مستوى 2 (تصنيفات فرعية) فوق الحسابات الحالية، ويربطها تحته دون تغيير أرقامها أو حذف أي شي
+const LEVEL2_HEADERS: { code: string; name: string; type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE"; parentCode: string }[] = [
+  { code: "1001", name: "الأصول المتداولة", type: "ASSET", parentCode: "1000" },
+  { code: "1002", name: "الأصول الثابتة", type: "ASSET", parentCode: "1000" },
+  { code: "2001", name: "الالتزامات المتداولة", type: "LIABILITY", parentCode: "2000" },
+  { code: "4001", name: "إيرادات الأتعاب القانونية", type: "REVENUE", parentCode: "4000" },
+  { code: "5001", name: "مصروفات تشغيلية", type: "EXPENSE", parentCode: "5000" },
+];
+
+// الحسابات الحالية اللي ننقلها لتصير تحت مستوى 2 الجديد (بدل ما تكون مباشرة تحت المستوى 1)
+const RELOCATE_TO_LEVEL2: { code: string; newParentCode: string }[] = [
+  { code: "1010", newParentCode: "1001" }, // الصندوق
+  { code: "1020", newParentCode: "1001" }, // البنك
+  { code: "1100", newParentCode: "1001" }, // ذمم العملاء
+  { code: "2100", newParentCode: "2001" }, // ذمم الموردين
+  { code: "2200", newParentCode: "2001" }, // ضريبة القيمة المضافة المستحقة
+  { code: "4100", newParentCode: "4001" }, // إيرادات أتعاب قانونية
+];
+
+export async function upgradeChartHierarchy() {
+  await ensureChartOfAccounts();
+
+  const allAccounts = await prisma.account.findMany();
+  const byCode: Record<string, (typeof allAccounts)[number]> = {};
+  for (const a of allAccounts) byCode[a.code] = a;
+
+  for (const h of LEVEL2_HEADERS) {
+    if (byCode[h.code]) continue;
+    const parent = byCode[h.parentCode];
+    if (!parent) continue;
+    const created = await prisma.account.create({
+      data: { code: h.code, name: h.name, type: h.type, parentId: parent.id, isSystem: true },
+    });
+    byCode[h.code] = created;
+  }
+
+  // ينقل كل حساب مصروف فرعي تحت 5000 مباشرة (غير 5001 نفسه) ليصير تحت 5001
+  const expensesRoot = byCode["5000"];
+  const opExHeader = byCode["5001"];
+  if (expensesRoot && opExHeader) {
+    await prisma.account.updateMany({
+      where: { parentId: expensesRoot.id, id: { not: opExHeader.id } },
+      data: { parentId: opExHeader.id },
+    });
+  }
+
+  const updates = RELOCATE_TO_LEVEL2.filter((r) => {
+    const account = byCode[r.code];
+    const newParent = byCode[r.newParentCode];
+    return account && newParent && account.parentId !== newParent.id;
+  });
+  if (updates.length > 0) {
+    await Promise.all(
+      updates.map((r) =>
+        prisma.account.update({ where: { id: byCode[r.code].id }, data: { parentId: byCode[r.newParentCode].id } })
+      )
+    );
+  }
+}
+
 export async function getSystemAccountId(code: string): Promise<string> {
   await ensureChartOfAccounts();
   const account = await prisma.account.findUnique({ where: { code } });
@@ -45,13 +105,13 @@ export async function getSystemAccountId(code: string): Promise<string> {
 
 // يبحث عن حساب مصروف فرعي مطابق للتصنيف، أو ينشئه تحت "المصروفات التشغيلية العامة"
 export async function getOrCreateExpenseAccount(categoryName: string | null | undefined): Promise<string> {
-  await ensureChartOfAccounts();
+  await upgradeChartHierarchy();
   if (!categoryName) return getSystemAccountId("5100");
 
   const existing = await prisma.account.findFirst({ where: { name: categoryName, type: "EXPENSE" } });
   if (existing) return existing.id;
 
-  const parent = await prisma.account.findUnique({ where: { code: "5000" } });
+  const parent = (await prisma.account.findUnique({ where: { code: "5001" } })) ?? (await prisma.account.findUnique({ where: { code: "5000" } }));
   const lastChild = await prisma.account.findFirst({
     where: { parentId: parent?.id },
     orderBy: { code: "desc" },

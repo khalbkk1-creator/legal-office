@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ensureChartOfAccounts } from "@/lib/accounting";
+import { upgradeChartHierarchy } from "@/lib/accounting";
 import AccountingScreen from "@/components/AccountingScreen";
 
 export default async function AccountingPage({
@@ -7,7 +7,7 @@ export default async function AccountingPage({
 }: {
   searchParams: { tab?: string };
 }) {
-  await ensureChartOfAccounts();
+  await upgradeChartHierarchy();
 
   const [accounts, entries, lineSums, sales, expenses] = await Promise.all([
     prisma.account.findMany({ orderBy: { code: "asc" } }),
