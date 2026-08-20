@@ -11,6 +11,7 @@ const expenseSchema = z.object({
   expenseDate: z.string().optional(),
   categoryId: z.string().optional(),
   caseId: z.string().optional(),
+  paymentAccountId: z.string().optional(),
 });
 
 export async function GET() {
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { description, amount, expenseDate, categoryId, caseId } = parsed.data;
+  const { description, amount, expenseDate, categoryId, caseId, paymentAccountId } = parsed.data;
   const user = session.user as any;
 
   const created = await prisma.expense.create({
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     const [expenseAccount, cashAccount] = await Promise.all([
       getOrCreateExpenseAccount(created.category?.name),
-      getSystemAccountId("1010"),
+      paymentAccountId ? Promise.resolve(paymentAccountId) : getSystemAccountId("1010"),
     ]);
     await postJournalEntry({
       description: `مصروف — ${description}`,

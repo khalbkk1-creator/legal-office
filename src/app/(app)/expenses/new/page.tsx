@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 
 type Category = { id: string; name: string };
 type CaseItem = { id: string; title: string; caseNumber: string };
+type Account = { id: string; code: string; name: string };
 
 export default function NewExpensePage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [cases, setCases] = useState<CaseItem[]>([]);
+  const [paymentAccounts, setPaymentAccounts] = useState<Account[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -20,12 +22,21 @@ export default function NewExpensePage() {
     amount: "",
     categoryId: "",
     caseId: "",
+    paymentAccountId: "",
     expenseDate: new Date().toISOString().slice(0, 10),
   });
 
   useEffect(() => {
     fetch("/api/expense-categories").then((r) => r.json()).then(setCategories);
     fetch("/api/cases").then((r) => r.json()).then(setCases);
+    fetch("/api/accounting/accounts")
+      .then((r) => r.json())
+      .then((data: Account[]) => {
+        const liquid = data.filter((a) => a.code.startsWith("10") && a.code !== "1100");
+        setPaymentAccounts(liquid);
+        const cash = liquid.find((a) => a.code === "1010");
+        setForm((f) => ({ ...f, paymentAccountId: cash?.id ?? liquid[0]?.id ?? "" }));
+      });
   }, []);
 
   function update(field: string, value: string) {
@@ -62,6 +73,7 @@ export default function NewExpensePage() {
         categoryId: form.categoryId || undefined,
         caseId: form.caseId || undefined,
         expenseDate: form.expenseDate,
+        paymentAccountId: form.paymentAccountId || undefined,
       }),
     });
 
@@ -141,6 +153,19 @@ export default function NewExpensePage() {
               + إضافة
             </button>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع</label>
+          <select
+            value={form.paymentAccountId}
+            onChange={(e) => update("paymentAccountId", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            {paymentAccounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
         </div>
 
         <div>

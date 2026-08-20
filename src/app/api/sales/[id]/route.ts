@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       try {
         const session2 = session.user as any;
         const [cashAccount, arAccount] = await Promise.all([
-          getSystemAccountId("1010"),
+          body.paymentAccountId ? Promise.resolve(body.paymentAccountId as string) : getSystemAccountId("1010"),
           getSystemAccountId("1100"),
         ]);
         await postJournalEntry({
