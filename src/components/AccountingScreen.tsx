@@ -391,7 +391,6 @@ export default function AccountingScreen({
 
 function AccountsTab({ accounts }: { accounts: Account[] }) {
   const router = useRouter();
-  const sorted = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ code: "", name: "", type: "EXPENSE", parentId: "" });
@@ -450,7 +449,21 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
     router.refresh();
   }
 
-  const parentOptions = accounts.filter((a) => a.code.endsWith("000") || !a.parentId);
+  const parentOptions = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
+
+  // بناء شجرة حقيقية متعددة المستويات مرتبة حسب الأصل والفرع
+  function buildTree(parentId: string | null, depth: number): { account: Account; depth: number }[] {
+    const children = accounts
+      .filter((a) => a.parentId === parentId)
+      .sort((a, b) => a.code.localeCompare(b.code));
+    let result: { account: Account; depth: number }[] = [];
+    for (const child of children) {
+      result.push({ account: child, depth });
+      result = result.concat(buildTree(child.id, depth + 1));
+    }
+    return result;
+  }
+  const tree = buildTree(null, 0);
 
   return (
     <div className="space-y-4">
@@ -526,48 +539,50 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((a) => (
-              <tr key={a.id} className={`border-t border-gray-50 ${!a.isActive ? "opacity-50" : ""}`}>
-                <td className="px-5 py-3 text-gray-500 font-mono">{a.code}</td>
-                <td className={`px-5 py-3 ${a.code.endsWith("000") ? "font-bold text-ink" : "text-gray-700 pr-8"}`}>
-                  {editingId === a.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
-                      />
-                      <button onClick={() => saveEdit(a.id)} className="text-xs text-primary-700 hover:underline">حفظ</button>
-                      <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:underline">إلغاء</button>
-                    </div>
-                  ) : a.code.endsWith("000") ? (
-                    a.name
-                  ) : (
-                    <Link href={`/accounting/ledger/${a.id}`} className="text-primary-700 hover:underline">
-                      {a.name}
-                    </Link>
-                  )}
-                </td>
-                <td className="px-5 py-3">
-                  <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[a.type]}`}>{typeLabels[a.type]}</span>
-                </td>
-                <td className="px-5 py-3">
-                  {a.isActive ? (
-                    <span className="text-xs text-primary-700">نشط</span>
-                  ) : (
-                    <span className="text-xs text-gray-400">معطّل</span>
-                  )}
-                </td>
-                <td className="px-5 py-3">
-                  {editingId !== a.id && (
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => { setEditingId(a.id); setEditName(a.name); }}
-                        className="text-xs text-primary-700 hover:underline"
-                      >
-                        تعديل
-                      </button>
-                      <button onClick={() => toggleActive(a)} className="text-xs text-amber-600 hover:underline">
+            {tree.map(({ account: a, depth }) => {
+              const hasChildren = accounts.some((c) => c.parentId === a.id);
+              return (
+                <tr key={a.id} className={`border-t border-gray-50 ${!a.isActive ? "opacity-50" : ""}`}>
+                  <td className="px-5 py-3 text-gray-500 font-mono">{a.code}</td>
+                  <td className={`px-5 py-3 ${hasChildren ? "font-bold text-ink" : "text-gray-700"}`} style={{ paddingRight: `${20 + depth * 24}px` }}>
+                    {editingId === a.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                        />
+                        <button onClick={() => saveEdit(a.id)} className="text-xs text-primary-700 hover:underline">حفظ</button>
+                        <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:underline">إلغاء</button>
+                      </div>
+                    ) : hasChildren ? (
+                      a.name
+                    ) : (
+                      <Link href={`/accounting/ledger/${a.id}`} className="text-primary-700 hover:underline">
+                        {a.name}
+                      </Link>
+                    )}
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[a.type]}`}>{typeLabels[a.type]}</span>
+                  </td>
+                  <td className="px-5 py-3">
+                    {a.isActive ? (
+                      <span className="text-xs text-primary-700">نشط</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">معطّل</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3">
+                    {editingId !== a.id && (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => { setEditingId(a.id); setEditName(a.name); }}
+                          className="text-xs text-primary-700 hover:underline"
+                        >
+                          تعديل
+                        </button>
+                        <button onClick={() => toggleActive(a)} className="text-xs text-amber-600 hover:underline">
                         {a.isActive ? "تعطيل" : "تفعيل"}
                       </button>
                       {!a.isSystem && (
@@ -579,7 +594,8 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
