@@ -324,7 +324,7 @@ export default function AccountingScreen({
 
       {tab === "journal" && <JournalTab entries={entries} accounts={accounts} />}
 
-      {tab === "accounts" && <AccountsTab accounts={accounts} />}
+      {tab === "accounts" && <AccountsTab accounts={accounts} trialBalance={trialBalance} />}
 
       {tab === "trial" && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
@@ -389,7 +389,7 @@ export default function AccountingScreen({
   );
 }
 
-function AccountsTab({ accounts }: { accounts: Account[] }) {
+function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBalance: TrialBalanceRow[] }) {
   const router = useRouter();
 
   const [showForm, setShowForm] = useState(false);
@@ -397,7 +397,12 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
+  const [editForm, setEditForm] = useState({ code: "", name: "", type: "", parentId: "" });
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const balanceByAccount: Record<string, number> = {};
+  for (const r of trialBalance) balanceByAccount[r.id] = r.balance;
 
   async function createAccount(e: React.FormEvent) {
     e.preventDefault();
@@ -423,10 +428,29 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
     await fetch(`/api/accounting/accounts/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName }),
+      body: JSON.stringify({
+        name: editForm.name,
+        code: editForm.code,
+        type: editForm.type,
+        parentId: editForm.parentId || null,
+      }),
     });
     setEditingId(null);
     router.refresh();
+  }
+
+  function startEdit(a: Account) {
+    setEditingId(a.id);
+    setEditForm({ code: a.code, name: a.name, type: a.type, parentId: a.parentId ?? "" });
+  }
+
+  function toggleCollapse(id: string) {
+    setCollapsed((c) => {
+      const next = new Set(c);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function toggleActive(a: Account) {
@@ -451,15 +475,39 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
 
   const parentOptions = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
 
+  const searchLower = search.trim().toLowerCase();
+  const matchesSearch = (a: Account) =>
+    !searchLower || a.name.toLowerCase().includes(searchLower) || a.code.includes(searchLower);
+
+  // إذا فيه بحث نشط، نحدد كل الحسابات المطابقة + أسلافها عشان يبين السياق
+  const visibleIds = new Set<string>();
+  if (searchLower) {
+    const byId: Record<string, Account> = {};
+    for (const a of accounts) byId[a.id] = a;
+    for (const a of accounts) {
+      if (matchesSearch(a)) {
+        let cur: Account | undefined = a;
+        while (cur) {
+          visibleIds.add(cur.id);
+          cur = cur.parentId ? byId[cur.parentId] : undefined;
+        }
+      }
+    }
+  }
+
   // بناء شجرة حقيقية متعددة المستويات مرتبة حسب الأصل والفرع
   function buildTree(parentId: string | null, depth: number): { account: Account; depth: number }[] {
     const children = accounts
       .filter((a) => a.parentId === parentId)
+      .filter((a) => !searchLower || visibleIds.has(a.id))
       .sort((a, b) => a.code.localeCompare(b.code));
     let result: { account: Account; depth: number }[] = [];
     for (const child of children) {
       result.push({ account: child, depth });
-      result = result.concat(buildTree(child.id, depth + 1));
+      const isCollapsed = !searchLower && collapsed.has(child.id);
+      if (!isCollapsed) {
+        result = result.concat(buildTree(child.id, depth + 1));
+      }
     }
     return result;
   }
@@ -527,6 +575,15 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
         </form>
       )}
 
+      <div className="flex items-center gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 ابحث برقم أو اسم الحساب..."
+          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+      </div>
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs">
@@ -534,6 +591,7 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
               <th className="text-right px-5 py-3 font-medium">الرقم</th>
               <th className="text-right px-5 py-3 font-medium">اسم الحساب</th>
               <th className="text-right px-5 py-3 font-medium">النوع</th>
+              <th className="text-right px-5 py-3 font-medium">الرصيد</th>
               <th className="text-right px-5 py-3 font-medium">الحالة</th>
               <th className="text-right px-5 py-3 font-medium"></th>
             </tr>
@@ -541,30 +599,75 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
           <tbody>
             {tree.map(({ account: a, depth }) => {
               const hasChildren = accounts.some((c) => c.parentId === a.id);
+              const isCollapsed = collapsed.has(a.id);
+              const balance = balanceByAccount[a.id];
               return (
                 <tr key={a.id} className={`border-t border-gray-50 ${!a.isActive ? "opacity-50" : ""}`}>
                   <td className="px-5 py-3 text-gray-500 font-mono">{a.code}</td>
-                  <td className={`px-5 py-3 ${hasChildren ? "font-bold text-ink" : "text-gray-700"}`} style={{ paddingRight: `${20 + depth * 24}px` }}>
+                  <td className="px-5 py-3" style={{ paddingRight: `${20 + depth * 24}px` }}>
                     {editingId === a.id ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                          className="rounded-lg border border-gray-300 px-2 py-1 text-sm w-32"
+                          placeholder="الاسم"
                         />
+                        {!a.isSystem && (
+                          <>
+                            <input
+                              value={editForm.code}
+                              onChange={(e) => setEditForm((f) => ({ ...f, code: e.target.value }))}
+                              className="rounded-lg border border-gray-300 px-2 py-1 text-sm w-20"
+                              dir="ltr"
+                              placeholder="الرقم"
+                            />
+                            <select
+                              value={editForm.type}
+                              onChange={(e) => setEditForm((f) => ({ ...f, type: e.target.value }))}
+                              className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                            >
+                              {Object.entries(typeLabels).map(([k, v]) => (
+                                <option key={k} value={k}>{v}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={editForm.parentId}
+                              onChange={(e) => setEditForm((f) => ({ ...f, parentId: e.target.value }))}
+                              className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                            >
+                              <option value="">بدون حساب رئيسي</option>
+                              {parentOptions.filter((p) => p.id !== a.id).map((p) => (
+                                <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
+                              ))}
+                            </select>
+                          </>
+                        )}
                         <button onClick={() => saveEdit(a.id)} className="text-xs text-primary-700 hover:underline">حفظ</button>
                         <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:underline">إلغاء</button>
                       </div>
-                    ) : hasChildren ? (
-                      a.name
                     ) : (
-                      <Link href={`/accounting/ledger/${a.id}`} className="text-primary-700 hover:underline">
-                        {a.name}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        {hasChildren && (
+                          <button onClick={() => toggleCollapse(a.id)} className="text-gray-400 hover:text-gray-600 text-xs w-4">
+                            {isCollapsed ? "▸" : "▾"}
+                          </button>
+                        )}
+                        {hasChildren ? (
+                          <span className="font-bold text-ink">{a.name}</span>
+                        ) : (
+                          <Link href={`/accounting/ledger/${a.id}`} className="text-primary-700 hover:underline">
+                            {a.name}
+                          </Link>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="px-5 py-3">
                     <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[a.type]}`}>{typeLabels[a.type]}</span>
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {balance !== undefined ? balance.toLocaleString() : "—"}
                   </td>
                   <td className="px-5 py-3">
                     {a.isActive ? (
@@ -576,24 +679,21 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
                   <td className="px-5 py-3">
                     {editingId !== a.id && (
                       <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => { setEditingId(a.id); setEditName(a.name); }}
-                          className="text-xs text-primary-700 hover:underline"
-                        >
+                        <button onClick={() => startEdit(a)} className="text-xs text-primary-700 hover:underline">
                           تعديل
                         </button>
                         <button onClick={() => toggleActive(a)} className="text-xs text-amber-600 hover:underline">
-                        {a.isActive ? "تعطيل" : "تفعيل"}
-                      </button>
-                      {!a.isSystem && (
-                        <button onClick={() => deleteAccount(a.id)} className="text-xs text-red-600 hover:underline">
-                          حذف
+                          {a.isActive ? "تعطيل" : "تفعيل"}
                         </button>
-                      )}
-                    </div>
-                  )}
-                </td>
-              </tr>
+                        {!a.isSystem && (
+                          <button onClick={() => deleteAccount(a.id)} className="text-xs text-red-600 hover:underline">
+                            حذف
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                </tr>
               );
             })}
           </tbody>
