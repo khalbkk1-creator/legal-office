@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const typeLabels: Record<string, string> = {
   ASSET: "أصول",
@@ -108,7 +109,11 @@ export default function AccountingScreen({
               {trialBalance.map((r) => (
                 <tr key={r.id} className="border-t border-gray-50">
                   <td className="px-5 py-3 text-gray-500">{r.code}</td>
-                  <td className="px-5 py-3 font-medium text-ink">{r.name}</td>
+                  <td className="px-5 py-3 font-medium">
+                    <Link href={`/accounting/ledger/${r.id}`} className="text-primary-700 hover:underline">
+                      {r.name}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3">
                     <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[r.type]}`}>{typeLabels[r.type]}</span>
                   </td>
@@ -299,8 +304,12 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
                       <button onClick={() => saveEdit(a.id)} className="text-xs text-primary-700 hover:underline">حفظ</button>
                       <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:underline">إلغاء</button>
                     </div>
-                  ) : (
+                  ) : a.code.endsWith("000") ? (
                     a.name
+                  ) : (
+                    <Link href={`/accounting/ledger/${a.id}`} className="text-primary-700 hover:underline">
+                      {a.name}
+                    </Link>
                   )}
                 </td>
                 <td className="px-5 py-3">
