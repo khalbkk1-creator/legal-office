@@ -25,6 +25,7 @@ const sourceLabels: Record<string, string> = {
   EXPENSE: "مصروف",
   PAYMENT: "تحصيل دفعة",
   MANUAL: "قيد يدوي",
+  REVERSAL: "عكس قيد",
 };
 
 type Account = { id: string; code: string; name: string; type: string; isSystem: boolean; isActive: boolean; parentId: string | null };
@@ -37,6 +38,8 @@ type JournalEntry = {
   sourceType: string | null;
   createdBy: { name: string } | null;
   lines: JournalLine[];
+  reversalOfId: string | null;
+  reversedBy: { id: string; entryNumber: string } | null;
 };
 type TrialBalanceRow = { id: string; code: string; name: string; type: string; debit: number; credit: number; balance: number };
 
@@ -354,6 +357,7 @@ function AccountsTab({ accounts }: { accounts: Account[] }) {
 function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: Account[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
+  const [reversingId, setReversingId] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState([
     { accountId: "", debit: "", credit: "" },
@@ -376,6 +380,19 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
 
   function removeLine(i: number) {
     setLines((ls) => ls.filter((_, idx) => idx !== i));
+  }
+
+  async function reverseEntry(id: string) {
+    if (!confirm("متأكد تبي تعكس هذا القيد؟ راح يُنشأ قيد عكسي يلغي أثره.")) return;
+    setReversingId(id);
+    const res = await fetch(`/api/accounting/journal-entries/${id}/reverse`, { method: "POST" });
+    setReversingId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "تعذر عكس القيد");
+      return;
+    }
+    router.refresh();
   }
 
   async function submit(e: React.FormEvent) {
@@ -508,6 +525,19 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
                 <p className="text-xs text-gray-400 mt-1">
                   {new Date(e.date).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" })}
                 </p>
+                {e.reversedBy ? (
+                  <p className="text-xs text-amber-600 mt-1">عُكس بالقيد {e.reversedBy.entryNumber}</p>
+                ) : e.reversalOfId ? (
+                  <p className="text-xs text-gray-400 mt-1">قيد عكسي</p>
+                ) : (
+                  <button
+                    onClick={() => reverseEntry(e.id)}
+                    disabled={reversingId === e.id}
+                    className="text-xs text-red-600 hover:underline mt-1 disabled:opacity-60"
+                  >
+                    {reversingId === e.id ? "..." : "عكس القيد"}
+                  </button>
+                )}
               </div>
             </div>
             <table className="w-full text-xs mt-2">

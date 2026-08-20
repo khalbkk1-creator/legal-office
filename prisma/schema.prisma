@@ -300,6 +300,10 @@ model JournalEntry {
   createdById String?
   createdBy   User?    @relation(fields: [createdById], references: [id])
 
+  reversalOfId String?       @unique
+  reversalOf   JournalEntry? @relation("EntryReversal", fields: [reversalOfId], references: [id])
+  reversedBy   JournalEntry? @relation("EntryReversal")
+
   createdAt DateTime @default(now())
   lines     JournalEntryLine[]
 

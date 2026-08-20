@@ -8,7 +8,7 @@ export default async function AccountingPage() {
   const [accounts, entries, lineSums] = await Promise.all([
     prisma.account.findMany({ orderBy: { code: "asc" } }),
     prisma.journalEntry.findMany({
-      include: { lines: { include: { account: true } }, createdBy: true },
+      include: { lines: { include: { account: true } }, createdBy: true, reversedBy: true },
       orderBy: { date: "desc" },
       take: 200,
     }),
