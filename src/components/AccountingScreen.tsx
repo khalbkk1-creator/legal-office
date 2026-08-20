@@ -85,9 +85,9 @@ export default function AccountingScreen({
   expenses: Expense[];
   salesSummary: { totalThisMonth: number; totalOutstanding: number; topCases: { title: string; total: number }[] };
   expenseSummary: { totalThisMonth: number; topCategories: [string, number][] };
-  initialTab?: "invoices" | "expenses" | "journal" | "accounts" | "trial";
+  initialTab?: "invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements";
 }) {
-  const [tab, setTab] = useState<"invoices" | "expenses" | "journal" | "accounts" | "trial">(initialTab ?? "journal");
+  const [tab, setTab] = useState<"invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements">(initialTab ?? "journal");
 
   const totalDebit = trialBalance.reduce((s, r) => s + r.debit, 0);
   const totalCredit = trialBalance.reduce((s, r) => s + r.credit, 0);
@@ -98,7 +98,7 @@ export default function AccountingScreen({
         <div>
           <h1 className="text-2xl font-bold text-ink">النظام المحاسبي</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {tab === "invoices" ? "فواتير الخدمات والإيرادات" : tab === "expenses" ? "مصاريف المكتب التشغيلية" : "دليل الحسابات والقيود اليومية وميزان المراجعة"}
+            {tab === "invoices" ? "فواتير الخدمات والإيرادات" : tab === "expenses" ? "مصاريف المكتب التشغيلية" : tab === "statements" ? "قائمة الدخل والميزانية العمومية" : "دليل الحسابات والقيود اليومية وميزان المراجعة"}
           </p>
         </div>
         {(tab === "invoices" || tab === "expenses") && (
@@ -151,6 +151,14 @@ export default function AccountingScreen({
           }`}
         >
           ⚖️ ميزان المراجعة
+        </button>
+        <button
+          onClick={() => setTab("statements")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+            tab === "statements" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          📄 القوائم المالية
         </button>
       </div>
 
@@ -375,6 +383,8 @@ export default function AccountingScreen({
           </table>
         </div>
       )}
+
+      {tab === "statements" && <FinancialStatementsTab trialBalance={trialBalance} />}
     </div>
   );
 }
@@ -786,6 +796,139 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
         {entries.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-8">لا توجد قيود مرحّلة بعد.</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function FinancialStatementsTab({ trialBalance }: { trialBalance: TrialBalanceRow[] }) {
+  const revenues = trialBalance.filter((r) => r.type === "REVENUE");
+  const expenses = trialBalance.filter((r) => r.type === "EXPENSE");
+  const assets = trialBalance.filter((r) => r.type === "ASSET");
+  const liabilities = trialBalance.filter((r) => r.type === "LIABILITY");
+  const equity = trialBalance.filter((r) => r.type === "EQUITY");
+
+  const totalRevenue = revenues.reduce((s, r) => s + r.balance, 0);
+  const totalExpenses = expenses.reduce((s, r) => s + r.balance, 0);
+  const netIncome = totalRevenue - totalExpenses;
+
+  const totalAssets = assets.reduce((s, r) => s + r.balance, 0);
+  const totalLiabilities = liabilities.reduce((s, r) => s + r.balance, 0);
+  const totalEquity = equity.reduce((s, r) => s + r.balance, 0);
+  const totalLiabilitiesAndEquity = totalLiabilities + totalEquity + netIncome;
+
+  const today = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* قائمة الدخل */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="font-bold text-ink mb-1">قائمة الدخل</h2>
+          <p className="text-xs text-gray-400 mb-4">حتى تاريخ {today}</p>
+
+          <p className="text-xs font-medium text-gray-500 mb-2">الإيرادات</p>
+          <div className="space-y-1.5 mb-4">
+            {revenues.map((r) => (
+              <div key={r.id} className="flex justify-between text-sm">
+                <span className="text-gray-600">{r.name}</span>
+                <span className="text-ink">{r.balance.toLocaleString()} ر.س</span>
+              </div>
+            ))}
+            {revenues.length === 0 && <p className="text-xs text-gray-400">لا توجد إيرادات مسجّلة</p>}
+            <div className="flex justify-between text-sm font-bold border-t border-gray-100 pt-1.5">
+              <span>إجمالي الإيرادات</span>
+              <span>{totalRevenue.toLocaleString()} ر.س</span>
+            </div>
+          </div>
+
+          <p className="text-xs font-medium text-gray-500 mb-2">المصروفات</p>
+          <div className="space-y-1.5 mb-4">
+            {expenses.map((r) => (
+              <div key={r.id} className="flex justify-between text-sm">
+                <span className="text-gray-600">{r.name}</span>
+                <span className="text-ink">{r.balance.toLocaleString()} ر.س</span>
+              </div>
+            ))}
+            {expenses.length === 0 && <p className="text-xs text-gray-400">لا توجد مصروفات مسجّلة</p>}
+            <div className="flex justify-between text-sm font-bold border-t border-gray-100 pt-1.5">
+              <span>إجمالي المصروفات</span>
+              <span>{totalExpenses.toLocaleString()} ر.س</span>
+            </div>
+          </div>
+
+          <div className={`flex justify-between text-base font-bold rounded-lg p-3 ${netIncome >= 0 ? "bg-primary-50 text-primary-700" : "bg-red-50 text-red-600"}`}>
+            <span>{netIncome >= 0 ? "صافي الربح" : "صافي الخسارة"}</span>
+            <span>{netIncome.toLocaleString()} ر.س</span>
+          </div>
+        </div>
+
+        {/* الميزانية العمومية */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="font-bold text-ink mb-1">الميزانية العمومية</h2>
+          <p className="text-xs text-gray-400 mb-4">كما في تاريخ {today}</p>
+
+          <p className="text-xs font-medium text-gray-500 mb-2">الأصول</p>
+          <div className="space-y-1.5 mb-4">
+            {assets.map((r) => (
+              <div key={r.id} className="flex justify-between text-sm">
+                <span className="text-gray-600">{r.name}</span>
+                <span className="text-ink">{r.balance.toLocaleString()} ر.س</span>
+              </div>
+            ))}
+            {assets.length === 0 && <p className="text-xs text-gray-400">لا توجد أصول مسجّلة</p>}
+            <div className="flex justify-between text-sm font-bold border-t border-gray-100 pt-1.5">
+              <span>إجمالي الأصول</span>
+              <span>{totalAssets.toLocaleString()} ر.س</span>
+            </div>
+          </div>
+
+          <p className="text-xs font-medium text-gray-500 mb-2">الالتزامات</p>
+          <div className="space-y-1.5 mb-4">
+            {liabilities.map((r) => (
+              <div key={r.id} className="flex justify-between text-sm">
+                <span className="text-gray-600">{r.name}</span>
+                <span className="text-ink">{r.balance.toLocaleString()} ر.س</span>
+              </div>
+            ))}
+            {liabilities.length === 0 && <p className="text-xs text-gray-400">لا توجد التزامات مسجّلة</p>}
+            <div className="flex justify-between text-sm font-medium border-t border-gray-100 pt-1.5">
+              <span>إجمالي الالتزامات</span>
+              <span>{totalLiabilities.toLocaleString()} ر.س</span>
+            </div>
+          </div>
+
+          <p className="text-xs font-medium text-gray-500 mb-2">حقوق الملكية</p>
+          <div className="space-y-1.5 mb-4">
+            {equity.map((r) => (
+              <div key={r.id} className="flex justify-between text-sm">
+                <span className="text-gray-600">{r.name}</span>
+                <span className="text-ink">{r.balance.toLocaleString()} ر.س</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">صافي ربح الفترة الحالية</span>
+              <span className="text-ink">{netIncome.toLocaleString()} ر.س</span>
+            </div>
+            <div className="flex justify-between text-sm font-medium border-t border-gray-100 pt-1.5">
+              <span>إجمالي حقوق الملكية</span>
+              <span>{(totalEquity + netIncome).toLocaleString()} ر.س</span>
+            </div>
+          </div>
+
+          <div className="flex justify-between text-base font-bold bg-gray-50 rounded-lg p-3 mb-2">
+            <span>إجمالي الالتزامات وحقوق الملكية</span>
+            <span>{totalLiabilitiesAndEquity.toLocaleString()} ر.س</span>
+          </div>
+
+          {Math.round(totalAssets * 100) === Math.round(totalLiabilitiesAndEquity * 100) ? (
+            <p className="text-xs text-primary-700 text-center">الميزانية متوازنة ✓ (الأصول = الالتزامات + حقوق الملكية)</p>
+          ) : (
+            <p className="text-xs text-red-600 text-center">
+              غير متوازنة — فرق {(totalAssets - totalLiabilitiesAndEquity).toLocaleString()} ر.س
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
