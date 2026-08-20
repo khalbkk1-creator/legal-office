@@ -745,6 +745,19 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
     router.refresh();
   }
 
+  async function deleteEntry(id: string) {
+    if (!confirm("تحذير: حذف القيد نهائي ولا يمكن التراجع عنه، وقد يسبب فرق بين البيانات الفعلية (فاتورة/مصروف) والقيود المحاسبية. الأفضل عادة استخدام \"عكس القيد\" بدلاً من الحذف. متأكد تبي تحذفه؟")) return;
+    setReversingId(id);
+    const res = await fetch(`/api/accounting/journal-entries/${id}`, { method: "DELETE" });
+    setReversingId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "تعذر حذف القيد");
+      return;
+    }
+    router.refresh();
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!balanced) {
@@ -899,6 +912,13 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
                     {reversingId === e.id ? "..." : "عكس القيد"}
                   </button>
                 )}
+                <button
+                  onClick={() => deleteEntry(e.id)}
+                  disabled={reversingId === e.id}
+                  className="text-xs text-gray-400 hover:text-red-600 hover:underline mt-1 block disabled:opacity-60"
+                >
+                  حذف نهائي
+                </button>
               </div>
             </div>
             <table className="w-full text-xs mt-2">
