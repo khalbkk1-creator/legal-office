@@ -592,6 +592,7 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
   const [showForm, setShowForm] = useState(false);
   const [reversingId, setReversingId] = useState<string | null>(null);
   const [description, setDescription] = useState("");
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [lines, setLines] = useState([
     { accountId: "", debit: "", credit: "" },
     { accountId: "", debit: "", credit: "" },
@@ -642,6 +643,7 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         description,
+        date: entryDate,
         lines: lines
           .filter((l) => l.accountId && (Number(l.debit) > 0 || Number(l.credit) > 0))
           .map((l) => ({ accountId: l.accountId, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 })),
@@ -673,13 +675,22 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
 
       {showForm && (
         <form onSubmit={submit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <input
-            required
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="وصف القيد"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          />
+          <div className="grid grid-cols-3 gap-3">
+            <input
+              required
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="وصف القيد"
+              className="col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <input
+              required
+              type="date"
+              value={entryDate}
+              onChange={(e) => setEntryDate(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
 
           <div className="space-y-2">
             {lines.map((l, i) => (
@@ -750,6 +761,7 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
               <div>
                 <p className="font-bold text-ink">{e.entryNumber}</p>
                 <p className="text-xs text-gray-400">{e.description}</p>
+                {e.createdBy && <p className="text-xs text-gray-400 mt-0.5">بواسطة: {e.createdBy.name}</p>}
               </div>
               <div className="text-left">
                 <span className="text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">

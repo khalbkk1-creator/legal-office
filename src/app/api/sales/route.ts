@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
       description: `فاتورة عميل — ${invoiceNumber}`,
       sourceType: "SALE",
       sourceId: created.id,
+      date: created.saleDate,
       createdById: user.id,
       lines,
     });

@@ -63,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           sourceType: "PAYMENT",
           sourceId: updated.id,
           createdById: session2.id,
+          date: body.paymentDate ? new Date(body.paymentDate) : undefined,
           lines: [
             { accountId: cashAccount, debit: paymentDelta, description: `تحصيل ${updated.invoiceNumber}` },
             { accountId: arAccount, credit: paymentDelta, description: `تحصيل ${updated.invoiceNumber}` },

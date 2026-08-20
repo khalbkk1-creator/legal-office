@@ -11,6 +11,7 @@ export default function MarkPaidButton({ saleId, totalAmount }: { saleId: string
   const [open, setOpen] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
     if (!open) return;
@@ -30,7 +31,12 @@ export default function MarkPaidButton({ saleId, totalAmount }: { saleId: string
     await fetch(`/api/sales/${saleId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentStatus: "PAID", paidAmount: totalAmount, paymentAccountId: accountId || undefined }),
+      body: JSON.stringify({
+        paymentStatus: "PAID",
+        paidAmount: totalAmount,
+        paymentAccountId: accountId || undefined,
+        paymentDate,
+      }),
     });
     setLoading(false);
     setOpen(false);
@@ -46,7 +52,13 @@ export default function MarkPaidButton({ saleId, totalAmount }: { saleId: string
   }
 
   return (
-    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+      <input
+        type="date"
+        value={paymentDate}
+        onChange={(e) => setPaymentDate(e.target.value)}
+        className="text-xs rounded-lg border border-gray-300 px-1.5 py-1"
+      />
       <select
         value={accountId}
         onChange={(e) => setAccountId(e.target.value)}

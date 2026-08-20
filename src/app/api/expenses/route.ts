@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       description: `مصروف — ${description}`,
       sourceType: "EXPENSE",
       sourceId: created.id,
+      date: created.expenseDate,
       createdById: user.id,
       lines: [
         { accountId: expenseAccount, debit: amount, description },
