@@ -26,7 +26,7 @@ const sourceLabels: Record<string, string> = {
   MANUAL: "قيد يدوي",
 };
 
-type Account = { id: string; code: string; name: string; type: string; isSystem: boolean };
+type Account = { id: string; code: string; name: string; type: string; isSystem: boolean; isActive: boolean; parentId: string | null };
 type JournalLine = { id: string; debit: number; credit: number; description: string | null; account: Account };
 type JournalEntry = {
   id: string;
@@ -149,32 +149,195 @@ export default function AccountingScreen({
 }
 
 function AccountsTab({ accounts }: { accounts: Account[] }) {
+  const router = useRouter();
   const sorted = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
 
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ code: "", name: "", type: "EXPENSE", parentId: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+
+  async function createAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    const res = await fetch("/api/accounting/accounts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...form, parentId: form.parentId || undefined }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "تعذر إضافة الحساب");
+      return;
+    }
+    setForm({ code: "", name: "", type: "EXPENSE", parentId: "" });
+    setShowForm(false);
+    router.refresh();
+  }
+
+  async function saveEdit(id: string) {
+    await fetch(`/api/accounting/accounts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editName }),
+    });
+    setEditingId(null);
+    router.refresh();
+  }
+
+  async function toggleActive(a: Account) {
+    await fetch(`/api/accounting/accounts/${a.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !a.isActive }),
+    });
+    router.refresh();
+  }
+
+  async function deleteAccount(id: string) {
+    if (!confirm("متأكد تبي تحذف هذا الحساب؟")) return;
+    const res = await fetch(`/api/accounting/accounts/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "تعذر حذف الحساب");
+      return;
+    }
+    router.refresh();
+  }
+
+  const parentOptions = accounts.filter((a) => a.code.endsWith("000") || !a.parentId);
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-gray-500 text-xs">
-          <tr>
-            <th className="text-right px-5 py-3 font-medium">الرقم</th>
-            <th className="text-right px-5 py-3 font-medium">اسم الحساب</th>
-            <th className="text-right px-5 py-3 font-medium">النوع</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((a) => (
-            <tr key={a.id} className="border-t border-gray-50">
-              <td className="px-5 py-3 text-gray-500 font-mono">{a.code}</td>
-              <td className={`px-5 py-3 ${a.code.endsWith("000") ? "font-bold text-ink" : "text-gray-700 pr-8"}`}>
-                {a.name}
-              </td>
-              <td className="px-5 py-3">
-                <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[a.type]}`}>{typeLabels[a.type]}</span>
-              </td>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowForm((s) => !s)}
+          className="bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
+        >
+          {showForm ? "إلغاء" : "+ حساب جديد"}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={createAccount} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              required
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+              placeholder="رقم الحساب (مثال: 5200)"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              dir="ltr"
+            />
+            <input
+              required
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="اسم الحساب"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <select
+              value={form.type}
+              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              {Object.entries(typeLabels).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+            <select
+              value={form.parentId}
+              onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">بدون حساب رئيسي</option>
+              {parentOptions.map((a) => (
+                <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+              ))}
+            </select>
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+          >
+            {saving ? "جاري الحفظ..." : "حفظ الحساب"}
+          </button>
+        </form>
+      )}
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-500 text-xs">
+            <tr>
+              <th className="text-right px-5 py-3 font-medium">الرقم</th>
+              <th className="text-right px-5 py-3 font-medium">اسم الحساب</th>
+              <th className="text-right px-5 py-3 font-medium">النوع</th>
+              <th className="text-right px-5 py-3 font-medium">الحالة</th>
+              <th className="text-right px-5 py-3 font-medium"></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sorted.map((a) => (
+              <tr key={a.id} className={`border-t border-gray-50 ${!a.isActive ? "opacity-50" : ""}`}>
+                <td className="px-5 py-3 text-gray-500 font-mono">{a.code}</td>
+                <td className={`px-5 py-3 ${a.code.endsWith("000") ? "font-bold text-ink" : "text-gray-700 pr-8"}`}>
+                  {editingId === a.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                      />
+                      <button onClick={() => saveEdit(a.id)} className="text-xs text-primary-700 hover:underline">حفظ</button>
+                      <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:underline">إلغاء</button>
+                    </div>
+                  ) : (
+                    a.name
+                  )}
+                </td>
+                <td className="px-5 py-3">
+                  <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[a.type]}`}>{typeLabels[a.type]}</span>
+                </td>
+                <td className="px-5 py-3">
+                  {a.isActive ? (
+                    <span className="text-xs text-primary-700">نشط</span>
+                  ) : (
+                    <span className="text-xs text-gray-400">معطّل</span>
+                  )}
+                </td>
+                <td className="px-5 py-3">
+                  {editingId !== a.id && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => { setEditingId(a.id); setEditName(a.name); }}
+                        className="text-xs text-primary-700 hover:underline"
+                      >
+                        تعديل
+                      </button>
+                      <button onClick={() => toggleActive(a)} className="text-xs text-amber-600 hover:underline">
+                        {a.isActive ? "تعطيل" : "تفعيل"}
+                      </button>
+                      {!a.isSystem && (
+                        <button onClick={() => deleteAccount(a.id)} className="text-xs text-red-600 hover:underline">
+                          حذف
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
