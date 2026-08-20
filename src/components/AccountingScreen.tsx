@@ -400,6 +400,7 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
   const [editForm, setEditForm] = useState({ code: "", name: "", type: "", parentId: "" });
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [resetting, setResetting] = useState(false);
 
   const balanceByAccount: Record<string, number> = {};
   for (const r of trialBalance) balanceByAccount[r.id] = r.balance;
@@ -473,6 +474,25 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
     router.refresh();
   }
 
+  async function resetChart() {
+    const first = confirm(
+      "⚠️ تحذير خطير: هذا الإجراء يحذف كل الحسابات وكل القيود اليومية المرحّلة نهائياً، ويبني دليل حسابات نظيف من جديد بـ3 مستويات. هذا لا يمكن التراجع عنه. متأكد؟"
+    );
+    if (!first) return;
+    const second = confirm("تأكيد أخير: راح تُحذف كل القيود المحاسبية بدون استثناء. اكتب OK بذهنك وتأكد إنك مستعد. تكمل؟");
+    if (!second) return;
+
+    setResetting(true);
+    const res = await fetch("/api/accounting/reset", { method: "POST" });
+    setResetting(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "تعذر إعادة التعيين");
+      return;
+    }
+    router.refresh();
+  }
+
   const parentOptions = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
 
   const searchLower = search.trim().toLowerCase();
@@ -515,7 +535,14 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <button
+          onClick={resetChart}
+          disabled={resetting}
+          className="text-xs text-red-600 hover:underline disabled:opacity-60"
+        >
+          {resetting ? "جاري إعادة التعيين..." : "🗑️ إعادة تعيين الدليل بالكامل"}
+        </button>
         <button
           onClick={() => setShowForm((s) => !s)}
           className="bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
