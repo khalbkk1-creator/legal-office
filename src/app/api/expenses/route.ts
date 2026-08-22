@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { getSystemAccountId, getOrCreateExpenseAccount, postJournalEntry } from "@/lib/accounting";
+import { getSystemAccountId, getOrCreateExpenseAccount, postJournalEntry, assertDateNotLocked } from "@/lib/accounting";
 
 const expenseSchema = z.object({
   description: z.string().min(1),
@@ -41,12 +41,19 @@ export async function POST(req: NextRequest) {
   const vat = vatAmount ?? 0;
   const netExpense = amount - vat;
 
+  const resolvedExpenseDate = expenseDate ? new Date(expenseDate) : new Date();
+  try {
+    await assertDateNotLocked(resolvedExpenseDate);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 400 });
+  }
+
   const created = await prisma.expense.create({
     data: {
       description,
       amount,
       vatAmount: vat,
-      expenseDate: expenseDate ? new Date(expenseDate) : undefined,
+      expenseDate: resolvedExpenseDate,
       categoryId: categoryId || undefined,
       caseId: caseId || undefined,
       createdById: user.id,
@@ -60,7 +67,9 @@ export async function POST(req: NextRequest) {
       paymentAccountId ? Promise.resolve(paymentAccountId) : getSystemAccountId("1010"),
       vat > 0 ? getSystemAccountId("1150") : Promise.resolve(null),
     ]);
-    const lines = [{ accountId: expenseAccount, debit: netExpense, description }];
+    const lines: { accountId: string; debit?: number; credit?: number; description?: string }[] = [
+      { accountId: expenseAccount, debit: netExpense, description },
+    ];
     if (vat > 0 && vatAccount) {
       lines.push({ accountId: vatAccount, debit: vat, description: `ضريبة مدخلات — ${description}` });
     }
