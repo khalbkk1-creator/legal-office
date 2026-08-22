@@ -327,7 +327,16 @@ export default function AccountingScreen({
       {tab === "accounts" && <AccountsTab accounts={accounts} trialBalance={trialBalance} />}
 
       {tab === "trial" && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <a
+              href="/api/accounting/export?type=trial-balance"
+              className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
+            >
+              📊 تصدير Excel
+            </a>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs">
               <tr>
@@ -381,6 +390,7 @@ export default function AccountingScreen({
               </tfoot>
             )}
           </table>
+          </div>
         </div>
       )}
 
@@ -820,7 +830,13 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <a
+          href="/api/accounting/export?type=journal"
+          className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
+        >
+          📊 تصدير Excel
+        </a>
         <button
           onClick={() => setShowForm((s) => !s)}
           className="bg-primary-700 hover:bg-primary-800 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
@@ -996,6 +1012,14 @@ function FinancialStatementsTab({ trialBalance }: { trialBalance: TrialBalanceRo
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <a
+          href="/api/accounting/export?type=statements"
+          className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
+        >
+          📊 تصدير Excel
+        </a>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* قائمة الدخل */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

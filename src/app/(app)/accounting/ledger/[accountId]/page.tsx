@@ -49,9 +49,17 @@ export default async function LedgerPage({ params }: { params: { accountId: stri
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/accounting" className="text-sm text-primary-700 hover:underline mb-2 inline-block">
-          ‹ رجوع للنظام المحاسبي
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/accounting" className="text-sm text-primary-700 hover:underline mb-2 inline-block">
+            ‹ رجوع للنظام المحاسبي
+          </Link>
+          <a
+            href={`/api/accounting/export-ledger/${account.id}`}
+            className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
+          >
+            📊 تصدير Excel
+          </a>
+        </div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-ink">{account.code} — {account.name}</h1>
           <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[account.type]}`}>
