@@ -50,6 +50,7 @@ const LEVEL2_HEADERS: { code: string; name: string; type: "ASSET" | "LIABILITY" 
 const LEVEL3_NEW_ACCOUNTS: { code: string; name: string; type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE"; parentCode: string }[] = [
   { code: "1210", name: "أثاث ومعدات مكتبية", type: "ASSET", parentCode: "1002" },
   { code: "1220", name: "أجهزة حاسوب وبرمجيات", type: "ASSET", parentCode: "1002" },
+  { code: "1150", name: "ضريبة القيمة المضافة القابلة للخصم (مدخلات)", type: "ASSET", parentCode: "1001" },
 ];
 
 // الحسابات الحالية اللي ننقلها لتصير تحت مستوى 2 الجديد (بدل ما تكون مباشرة تحت المستوى 1)

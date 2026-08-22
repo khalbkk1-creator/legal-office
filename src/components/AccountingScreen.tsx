@@ -36,6 +36,8 @@ type Sale = {
   invoiceNumber: string;
   description: string;
   totalAmount: number;
+  vatAmount: number;
+  saleDate: string;
   paymentStatus: string;
   client: { name: string };
   case: { id: string; caseNumber: string } | null;
@@ -44,6 +46,7 @@ type Expense = {
   id: string;
   description: string;
   amount: number;
+  vatAmount: number;
   expenseDate: string;
   category: { name: string } | null;
   case: { id: string; caseNumber: string } | null;
@@ -85,9 +88,9 @@ export default function AccountingScreen({
   expenses: Expense[];
   salesSummary: { totalThisMonth: number; totalOutstanding: number; topCases: { title: string; total: number }[] };
   expenseSummary: { totalThisMonth: number; topCategories: [string, number][] };
-  initialTab?: "invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements";
+  initialTab?: "invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements" | "vat";
 }) {
-  const [tab, setTab] = useState<"invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements">(initialTab ?? "journal");
+  const [tab, setTab] = useState<"invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements" | "vat">(initialTab ?? "journal");
 
   const totalDebit = trialBalance.reduce((s, r) => s + r.debit, 0);
   const totalCredit = trialBalance.reduce((s, r) => s + r.credit, 0);
@@ -159,6 +162,14 @@ export default function AccountingScreen({
           }`}
         >
           📄 القوائم المالية
+        </button>
+        <button
+          onClick={() => setTab("vat")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+            tab === "vat" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          🧾 ضريبة القيمة المضافة
         </button>
       </div>
 
@@ -395,6 +406,8 @@ export default function AccountingScreen({
       )}
 
       {tab === "statements" && <FinancialStatementsTab trialBalance={trialBalance} />}
+
+      {tab === "vat" && <VatReportTab sales={sales} expenses={expenses} />}
     </div>
   );
 }
@@ -1127,6 +1140,127 @@ function FinancialStatementsTab({ trialBalance }: { trialBalance: TrialBalanceRo
               غير متوازنة — فرق {(totalAssets - totalLiabilitiesAndEquity).toLocaleString()} ر.س
             </p>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VatReportTab({ sales, expenses }: { sales: Sale[]; expenses: Expense[] }) {
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  const today = now.toISOString().slice(0, 10);
+
+  const [from, setFrom] = useState(firstOfMonth);
+  const [to, setTo] = useState(today);
+
+  const fromDate = new Date(from + "T00:00:00");
+  const toDate = new Date(to + "T23:59:59");
+
+  const salesInRange = sales.filter((s) => {
+    const d = new Date(s.saleDate);
+    return d >= fromDate && d <= toDate;
+  });
+  const expensesInRange = expenses.filter((e) => {
+    const d = new Date(e.expenseDate);
+    return d >= fromDate && d <= toDate;
+  });
+
+  const outputVat = salesInRange.reduce((sum, s) => sum + s.vatAmount, 0);
+  const inputVat = expensesInRange.reduce((sum, e) => sum + e.vatAmount, 0);
+  const netDue = outputVat - inputVat;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-end gap-3 flex-wrap justify-between">
+          <div className="flex items-end gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">من تاريخ</label>
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">إلى تاريخ</label>
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <a
+            href={`/api/accounting/export?type=vat&from=${from}&to=${to}`}
+            className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
+          >
+            📊 تصدير Excel
+          </a>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <p className="text-xs text-gray-400 mb-1">ضريبة المخرجات (على المبيعات)</p>
+          <p className="text-2xl font-bold text-primary-700">{outputVat.toLocaleString()} ر.س</p>
+          <p className="text-xs text-gray-400 mt-1">{salesInRange.length} فاتورة</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <p className="text-xs text-gray-400 mb-1">ضريبة المدخلات (القابلة للخصم)</p>
+          <p className="text-2xl font-bold text-blue-700">{inputVat.toLocaleString()} ر.س</p>
+          <p className="text-xs text-gray-400 mt-1">{expensesInRange.length} مصروف</p>
+        </div>
+        <div className={`rounded-2xl border p-6 ${netDue >= 0 ? "bg-red-50 border-red-100" : "bg-primary-50 border-primary-100"}`}>
+          <p className="text-xs text-gray-500 mb-1">{netDue >= 0 ? "الضريبة المستحقة للتوريد" : "رصيد ضريبي لصالحك"}</p>
+          <p className={`text-2xl font-bold ${netDue >= 0 ? "text-red-600" : "text-primary-700"}`}>
+            {Math.abs(netDue).toLocaleString()} ر.س
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+          <div className="px-5 py-3 border-b border-gray-50 font-bold text-ink text-sm">فواتير الفترة</div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 text-xs">
+              <tr>
+                <th className="text-right px-5 py-2 font-medium">الفاتورة</th>
+                <th className="text-right px-5 py-2 font-medium">التاريخ</th>
+                <th className="text-right px-5 py-2 font-medium">الضريبة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salesInRange.map((s) => (
+                <tr key={s.id} className="border-t border-gray-50">
+                  <td className="px-5 py-2 text-ink">{s.invoiceNumber}</td>
+                  <td className="px-5 py-2 text-gray-500">{new Date(s.saleDate).toLocaleDateString("ar-SA")}</td>
+                  <td className="px-5 py-2 text-gray-700">{s.vatAmount.toLocaleString()}</td>
+                </tr>
+              ))}
+              {salesInRange.length === 0 && (
+                <tr><td colSpan={3} className="px-5 py-6 text-center text-gray-400">لا توجد فواتير بهذه الفترة</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+          <div className="px-5 py-3 border-b border-gray-50 font-bold text-ink text-sm">مصاريف الفترة (فيها ضريبة مدخلات)</div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 text-xs">
+              <tr>
+                <th className="text-right px-5 py-2 font-medium">المصروف</th>
+                <th className="text-right px-5 py-2 font-medium">التاريخ</th>
+                <th className="text-right px-5 py-2 font-medium">الضريبة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expensesInRange.filter((e) => e.vatAmount > 0).map((e) => (
+                <tr key={e.id} className="border-t border-gray-50">
+                  <td className="px-5 py-2 text-ink">{e.description}</td>
+                  <td className="px-5 py-2 text-gray-500">{new Date(e.expenseDate).toLocaleDateString("ar-SA")}</td>
+                  <td className="px-5 py-2 text-gray-700">{e.vatAmount.toLocaleString()}</td>
+                </tr>
+              ))}
+              {expensesInRange.filter((e) => e.vatAmount > 0).length === 0 && (
+                <tr><td colSpan={3} className="px-5 py-6 text-center text-gray-400">لا توجد مصاريف فيها ضريبة مدخلات بهذه الفترة</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

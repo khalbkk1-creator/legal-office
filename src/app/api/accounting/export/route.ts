@@ -127,5 +127,46 @@ export async function GET(req: NextRequest) {
     return toXlsxResponse(wb, `القوائم-المالية-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  if (type === "vat") {
+    const from = req.nextUrl.searchParams.get("from");
+    const to = req.nextUrl.searchParams.get("to");
+    const fromDate = from ? new Date(from + "T00:00:00") : new Date(0);
+    const toDate = to ? new Date(to + "T23:59:59") : new Date();
+
+    const [sales, expenses] = await Promise.all([
+      prisma.sale.findMany({ where: { saleDate: { gte: fromDate, lte: toDate } }, orderBy: { saleDate: "asc" } }),
+      prisma.expense.findMany({ where: { expenseDate: { gte: fromDate, lte: toDate }, vatAmount: { gt: 0 } }, orderBy: { expenseDate: "asc" } }),
+    ]);
+
+    const outputVat = sales.reduce((s, x) => s + x.vatAmount, 0);
+    const inputVat = expenses.reduce((s, x) => s + x.vatAmount, 0);
+
+    const salesRows = sales.map((s) => ({
+      "رقم الفاتورة": s.invoiceNumber,
+      "التاريخ": s.saleDate.toLocaleDateString("ar-SA"),
+      "المبلغ": s.amount,
+      "الضريبة": s.vatAmount,
+      "الإجمالي": s.totalAmount,
+    }));
+    const expenseRows = expenses.map((e) => ({
+      "الوصف": e.description,
+      "التاريخ": e.expenseDate.toLocaleDateString("ar-SA"),
+      "المبلغ": e.amount - e.vatAmount,
+      "الضريبة": e.vatAmount,
+      "الإجمالي": e.amount,
+    }));
+    const summaryRows = [
+      { "البند": "ضريبة المخرجات (المبيعات)", "المبلغ": outputVat },
+      { "البند": "ضريبة المدخلات (المصروفات)", "المبلغ": inputVat },
+      { "البند": "صافي الضريبة المستحقة", "المبلغ": outputVat - inputVat },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "الملخص");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesRows), "فواتير المخرجات");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows), "مصاريف المدخلات");
+    return toXlsxResponse(wb, `تقرير-ضريبة-القيمة-المضافة-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
   return NextResponse.json({ error: "نوع التقرير غير معروف" }, { status: 400 });
 }

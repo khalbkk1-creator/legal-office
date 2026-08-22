@@ -147,6 +147,7 @@ model Expense {
   id          String   @id @default(cuid())
   description String
   amount      Float
+  vatAmount   Float    @default(0) // ضريبة القيمة المضافة المدفوعة ضمن المصروف (مدخلات)
   expenseDate DateTime @default(now())
 
   categoryId String?

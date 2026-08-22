@@ -20,6 +20,7 @@ export default function NewExpensePage() {
   const [form, setForm] = useState({
     description: "",
     amount: "",
+    vatAmount: "",
     categoryId: "",
     caseId: "",
     paymentAccountId: "",
@@ -70,6 +71,7 @@ export default function NewExpensePage() {
       body: JSON.stringify({
         description: form.description,
         amount: Number(form.amount),
+        vatAmount: form.vatAmount ? Number(form.vatAmount) : undefined,
         categoryId: form.categoryId || undefined,
         caseId: form.caseId || undefined,
         expenseDate: form.expenseDate,
@@ -111,6 +113,18 @@ export default function NewExpensePage() {
               step="0.01"
               value={form.amount}
               onChange={(e) => update("amount", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ضريبة القيمة المضافة المضمّنة (اختياري)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.vatAmount}
+              onChange={(e) => update("vatAmount", e.target.value)}
+              placeholder="لو الفاتورة فيها ضريبة قابلة للخصم"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
           </div>

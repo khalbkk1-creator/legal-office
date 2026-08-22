@@ -8,6 +8,7 @@ import { getSystemAccountId, getOrCreateExpenseAccount, postJournalEntry } from 
 const expenseSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
+  vatAmount: z.number().min(0).optional(),
   expenseDate: z.string().optional(),
   categoryId: z.string().optional(),
   caseId: z.string().optional(),
@@ -35,13 +36,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { description, amount, expenseDate, categoryId, caseId, paymentAccountId } = parsed.data;
+  const { description, amount, vatAmount, expenseDate, categoryId, caseId, paymentAccountId } = parsed.data;
   const user = session.user as any;
+  const vat = vatAmount ?? 0;
+  const netExpense = amount - vat;
 
   const created = await prisma.expense.create({
     data: {
       description,
       amount,
+      vatAmount: vat,
       expenseDate: expenseDate ? new Date(expenseDate) : undefined,
       categoryId: categoryId || undefined,
       caseId: caseId || undefined,
@@ -51,20 +55,24 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    const [expenseAccount, cashAccount] = await Promise.all([
+    const [expenseAccount, cashAccount, vatAccount] = await Promise.all([
       getOrCreateExpenseAccount(created.category?.name),
       paymentAccountId ? Promise.resolve(paymentAccountId) : getSystemAccountId("1010"),
+      vat > 0 ? getSystemAccountId("1150") : Promise.resolve(null),
     ]);
+    const lines = [{ accountId: expenseAccount, debit: netExpense, description }];
+    if (vat > 0 && vatAccount) {
+      lines.push({ accountId: vatAccount, debit: vat, description: `ضريبة مدخلات — ${description}` });
+    }
+    lines.push({ accountId: cashAccount, credit: amount, description });
+
     await postJournalEntry({
       description: `مصروف — ${description}`,
       sourceType: "EXPENSE",
       sourceId: created.id,
       date: created.expenseDate,
       createdById: user.id,
-      lines: [
-        { accountId: expenseAccount, debit: amount, description },
-        { accountId: cashAccount, credit: amount, description },
-      ],
+      lines,
     });
   } catch (e) {
     console.error("Journal posting failed for expense:", e);
