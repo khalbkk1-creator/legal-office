@@ -13,7 +13,7 @@ async function nextRequestNumber() {
   return `PR-${year}-${(count + 1).toString().padStart(5, "0")}`;
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
@@ -24,8 +24,10 @@ export async function GET(req: NextRequest) {
       case: true,
       requestedBy: true,
       managerApprovedBy: true,
+      accountantApprovedBy: true,
       financeApprovedBy: true,
       rejectedBy: true,
+      closedBy: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -74,7 +76,9 @@ export async function POST(req: NextRequest) {
 
   const { data: publicUrlData } = supabaseAdmin.storage.from(DOCUMENTS_BUCKET).getPublicUrl(storagePath);
 
+  // اعتماد المدير مرحلة اختيارية (فقط إذا كان للموظف مدير مباشر)، بعده دايماً يمر بالمحاسب ثم المدير المالي
   const needsManagerApproval = !!requester.managerId;
+  const initialStatus = needsManagerApproval ? "PENDING_MANAGER" : "PENDING_ACCOUNTANT";
   const requestNumber = await nextRequestNumber();
 
   const created = await prisma.paymentRequest.create({
@@ -88,7 +92,7 @@ export async function POST(req: NextRequest) {
       caseId,
       requestedById: user.id,
       needsManagerApproval,
-      status: needsManagerApproval ? "PENDING_MANAGER" : "PENDING_FINANCE",
+      status: initialStatus,
       attachmentUrl: publicUrlData.publicUrl,
       attachmentName: file.name,
     },

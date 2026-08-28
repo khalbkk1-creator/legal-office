@@ -20,7 +20,7 @@ export async function GET() {
   if (guard.error) return guard.error;
 
   const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true, managerId: true },
+    select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true, managerId: true, positionId: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(users);
@@ -32,6 +32,7 @@ const createSchema = z.object({
   password: z.string().min(6),
   role: z.enum(["PARTNER", "LAWYER", "SECRETARY"]),
   phone: z.string().optional(),
+  positionId: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: parsed.data.role,
       phone: parsed.data.phone || undefined,
+      positionId: parsed.data.positionId || undefined,
     },
     select: { id: true, name: true, email: true, role: true },
   });

@@ -24,6 +24,7 @@ type PaymentRequest = {
   invoiceUrl: string | null;
   invoiceName: string | null;
   managerNote: string | null;
+  accountantNote: string | null;
   financeNote: string | null;
   rejectionReason: string | null;
   paidAt: string | null;
@@ -34,6 +35,7 @@ type PaymentRequest = {
   case: { id: string; caseNumber: string } | null;
   requestedBy: { id: string; name: string; managerId: string | null };
   managerApprovedBy: { name: string } | null;
+  accountantApprovedBy: { name: string } | null;
   financeApprovedBy: { name: string } | null;
   rejectedBy: { name: string } | null;
   closedBy: { name: string } | null;
@@ -41,8 +43,9 @@ type PaymentRequest = {
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING_MANAGER: { label: "بانتظار اعتماد المدير", color: "bg-amber-50 text-amber-700" },
-  PENDING_FINANCE: { label: "بانتظار اعتماد المالية", color: "bg-purple-50 text-purple-700" },
-  APPROVED: { label: "معتمد — بانتظار الصرف", color: "bg-blue-50 text-blue-700" },
+  PENDING_ACCOUNTANT: { label: "بانتظار اعتماد المحاسب", color: "bg-purple-50 text-purple-700" },
+  PENDING_FINANCE: { label: "بانتظار اعتماد المدير المالي", color: "bg-indigo-50 text-indigo-700" },
+  APPROVED: { label: "معتمد — بانتظار تنفيذك للصرف", color: "bg-blue-50 text-blue-700" },
   PAID: { label: "تم الصرف — بانتظار الفاتورة", color: "bg-orange-50 text-orange-700" },
   CLOSED: { label: "مُقفلة", color: "bg-primary-50 text-primary-700" },
   REJECTED: { label: "مرفوض", color: "bg-red-50 text-red-600" },
@@ -51,6 +54,8 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 export default function PaymentRequestsScreen({
   currentUserId,
   currentUserRole,
+  currentUserIsAccountant,
+  currentUserIsFinancialManager,
   requests,
   payees,
   categories,
@@ -59,12 +64,13 @@ export default function PaymentRequestsScreen({
 }: {
   currentUserId: string;
   currentUserRole: string;
+  currentUserIsAccountant: boolean;
+  currentUserIsFinancialManager: boolean;
   requests: PaymentRequest[];
   payees: Payee[];
   categories: Category[];
   cases: CaseItem[];
   accounts: Account[];
-  allUsers: { id: string; name: string; managerId: string | null }[];
 }) {
   const [tab, setTab] = useState<"mine" | "pending" | "all">("pending");
 
@@ -74,9 +80,10 @@ export default function PaymentRequestsScreen({
     if (r.status === "PENDING_MANAGER") {
       return r.requestedBy.managerId === currentUserId || isPartner;
     }
-    if (r.status === "PENDING_FINANCE") return isPartner;
-    if (r.status === "APPROVED") return isPartner;
-    if (r.status === "PAID" && r.invoiceUrl && isPartner) return true;
+    if (r.status === "PENDING_ACCOUNTANT") return currentUserIsAccountant || isPartner;
+    if (r.status === "PENDING_FINANCE") return currentUserIsFinancialManager || isPartner;
+    if (r.status === "APPROVED") return r.requestedBy.id === currentUserId || isPartner;
+    if (r.status === "PAID" && r.invoiceUrl) return currentUserIsAccountant || isPartner;
     return false;
   }
 
@@ -475,6 +482,7 @@ function RequestCard({ r, canAct, accounts, currentUserId }: { r: PaymentRequest
   }
 
   const total = r.amount;
+  const isOwner = r.requestedBy.id === currentUserId;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -500,8 +508,11 @@ function RequestCard({ r, canAct, accounts, currentUserId }: { r: PaymentRequest
       {r.managerApprovedBy && (
         <p className="text-xs text-gray-400 mb-1">✓ اعتمد المدير: {r.managerApprovedBy.name}{r.managerNote && ` — ${r.managerNote}`}</p>
       )}
+      {r.accountantApprovedBy && (
+        <p className="text-xs text-gray-400 mb-1">✓ اعتمد المحاسب: {r.accountantApprovedBy.name}{r.accountantNote && ` — ${r.accountantNote}`}</p>
+      )}
       {r.financeApprovedBy && (
-        <p className="text-xs text-gray-400 mb-1">✓ اعتمدت المالية: {r.financeApprovedBy.name}{r.financeNote && ` — ${r.financeNote}`}</p>
+        <p className="text-xs text-gray-400 mb-1">✓ اعتمد المدير المالي: {r.financeApprovedBy.name}{r.financeNote && ` — ${r.financeNote}`}</p>
       )}
       {r.rejectedBy && (
         <p className="text-xs text-red-600 mb-1">✗ رفض: {r.rejectedBy.name} — {r.rejectionReason}</p>
@@ -527,7 +538,7 @@ function RequestCard({ r, canAct, accounts, currentUserId }: { r: PaymentRequest
 
       {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1 mt-2">{error}</p>}
 
-      {r.status === "PAID" && !r.invoiceUrl && r.requestedBy.id === currentUserId && (
+      {r.status === "PAID" && !r.invoiceUrl && isOwner && (
         <div className="mt-3 border-t border-gray-100 pt-3 space-y-2 bg-amber-50 -mx-5 -mb-5 px-5 pb-5 rounded-b-2xl">
           <p className="text-xs text-amber-800 font-medium">📩 مطلوب منك إرفاق فاتورة المورد لإقفال الطلب</p>
           <div className="flex items-center gap-2">
@@ -547,7 +558,7 @@ function RequestCard({ r, canAct, accounts, currentUserId }: { r: PaymentRequest
         </div>
       )}
 
-      {canAct && (r.status === "PENDING_MANAGER" || r.status === "PENDING_FINANCE") && (
+      {canAct && (r.status === "PENDING_MANAGER" || r.status === "PENDING_ACCOUNTANT" || r.status === "PENDING_FINANCE") && (
         <div className="mt-3 border-t border-gray-100 pt-3 space-y-2">
           {!rejecting ? (
             <>
@@ -585,9 +596,9 @@ function RequestCard({ r, canAct, accounts, currentUserId }: { r: PaymentRequest
         </div>
       )}
 
-      {canAct && r.status === "APPROVED" && (
-        <div className="mt-3 border-t border-gray-100 pt-3 space-y-2">
-          <p className="text-xs text-gray-500">رفع التحويل وتنفيذ الصرف</p>
+      {r.status === "APPROVED" && isOwner && (
+        <div className="mt-3 border-t border-gray-100 pt-3 space-y-2 bg-blue-50 -mx-5 -mb-5 px-5 pb-5 rounded-b-2xl">
+          <p className="text-xs text-blue-800 font-medium">✓ اكتمل الاعتماد — نفّذ الصرف الآن وارفع إثبات التحويل</p>
           <div className="flex items-end gap-2 flex-wrap">
             <div>
               <label className="block text-xs text-gray-500 mb-1">الحساب المصروف منه</label>

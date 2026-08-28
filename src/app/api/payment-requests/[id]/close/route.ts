@@ -5,13 +5,18 @@ import { prisma } from "@/lib/prisma";
 import { postJournalEntry, getSystemAccountId, assertDateNotLocked } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
-  const user = session.user as any;
-  if (user.role !== "PARTNER") {
-    return NextResponse.json({ error: "إقفال الفاتورة متاح للشريك فقط" }, { status: 403 });
+  const sessionUser = session.user as any;
+  const actingUser = await prisma.user.findUnique({ where: { id: sessionUser.id }, include: { position: true } });
+  if (!actingUser) return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+
+  const isPartner = actingUser.role === "PARTNER";
+  const isAccountant = !!actingUser.position?.isAccountant;
+  if (!isPartner && !isAccountant) {
+    return NextResponse.json({ error: "إقفال الفاتورة متاح للمحاسب أو الشريك فقط" }, { status: 403 });
   }
 
   const request = await prisma.paymentRequest.findUnique({
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     description: `إقفال فاتورة مورد — ${request.requestNumber} — ${request.description}`,
     sourceType: "PAYMENT_REQUEST_CLOSE",
     sourceId: request.id,
-    createdById: user.id,
+    createdById: actingUser.id,
     lines,
   });
 
@@ -60,15 +65,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     where: { id: params.id },
     data: {
       status: "CLOSED",
-      closedById: user.id,
+      closedById: actingUser.id,
       closedAt: new Date(),
       closingJournalEntryId: journalEntry.id,
     },
   });
 
   await logAudit({
-    userId: user.id,
-    userName: user.name,
+    userId: actingUser.id,
+    userName: actingUser.name,
     action: "UPDATE",
     entityType: "PaymentRequest",
     entityId: params.id,

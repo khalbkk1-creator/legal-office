@@ -11,17 +11,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  if (user.role !== "PARTNER") {
-    return NextResponse.json({ error: "رفع التحويل متاح للشريك فقط" }, { status: 403 });
-  }
 
   const request = await prisma.paymentRequest.findUnique({
     where: { id: params.id },
     include: { payee: true },
   });
   if (!request) return NextResponse.json({ error: "الطلب غير موجود" }, { status: 404 });
+
+  const isOwner = request.requestedById === user.id;
+  if (!isOwner && user.role !== "PARTNER") {
+    return NextResponse.json({ error: "تنفيذ الصرف متاح لمقدّم الطلب أو الشريك فقط" }, { status: 403 });
+  }
   if (request.status !== "APPROVED") {
-    return NextResponse.json({ error: "الطلب لازم يكون معتمد من المالية قبل الصرف" }, { status: 400 });
+    return NextResponse.json({ error: "الطلب لازم يكون معتمد بالكامل قبل الصرف" }, { status: 400 });
   }
 
   try {
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     action: "UPDATE",
     entityType: "PaymentRequest",
     entityId: params.id,
-    description: `صرف ورحّل سداد طلب صرف: ${request.requestNumber} (${request.amount.toLocaleString()} ر.س)`,
+    description: `صرف ورحّل دفعة طلب صرف: ${request.requestNumber} (${request.amount.toLocaleString()} ر.س)`,
   });
 
   return NextResponse.json(updated);
