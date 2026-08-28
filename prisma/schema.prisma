@@ -435,13 +435,18 @@ model PaymentRequest {
   requestedById String
   requestedBy   User   @relation("RequestedPayments", fields: [requestedById], references: [id])
 
-  status String @default("PENDING_MANAGER") // PENDING_MANAGER / PENDING_FINANCE / APPROVED / REJECTED / PAID
+  status String @default("PENDING_MANAGER") // PENDING_MANAGER / PENDING_ACCOUNTANT / PENDING_FINANCE / APPROVED / REJECTED / PAID / CLOSED
 
   needsManagerApproval Boolean @default(true)
   managerApprovedById  String?
   managerApprovedBy    User?     @relation("ManagerApprovedPayments", fields: [managerApprovedById], references: [id])
   managerApprovedAt    DateTime?
   managerNote          String?
+
+  accountantApprovedById String?
+  accountantApprovedBy   User?     @relation("AccountantApprovedPayments", fields: [accountantApprovedById], references: [id])
+  accountantApprovedAt   DateTime?
+  accountantNote         String?
 
   financeApprovedById String?
   financeApprovedBy   User?     @relation("FinanceApprovedPayments", fields: [financeApprovedById], references: [id])
@@ -557,6 +562,19 @@ model Sale {
   @@schema("public")
 }
 
+model Position {
+  id                 String   @id @default(cuid())
+  name               String   @unique // المسمى الوظيفي (مثال: محاسب، مدير مالي)
+  allowedModules     String[] @default([]) // الشاشات المسموح الوصول لها
+  isAccountant       Boolean  @default(false) // يعتمد كمرحلة "المحاسب" بطلبات الصرف
+  isFinancialManager Boolean  @default(false) // يعتمد كمرحلة "المدير المالي" بطلبات الصرف
+  createdAt          DateTime @default(now())
+
+  users User[]
+
+  @@schema("public")
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -569,6 +587,9 @@ model User {
   managerId String?
   manager   User?   @relation("ManagerOf", fields: [managerId], references: [id])
   directReports User[] @relation("ManagerOf")
+
+  positionId String?
+  position   Position? @relation(fields: [positionId], references: [id])
 
   assignedCases Case[]        @relation("AssignedLawyer")
   caseUpdates   CaseUpdate[]
@@ -584,6 +605,7 @@ model User {
 
   requestedPayments      PaymentRequest[] @relation("RequestedPayments")
   managerApprovedPayments PaymentRequest[] @relation("ManagerApprovedPayments")
+  accountantApprovedPayments PaymentRequest[] @relation("AccountantApprovedPayments")
   financeApprovedPayments PaymentRequest[] @relation("FinanceApprovedPayments")
   rejectedPayments        PaymentRequest[] @relation("RejectedPayments")
   closedPayments          PaymentRequest[] @relation("ClosedPayments")

@@ -1,0 +1,16 @@
+export const SYSTEM_MODULES: { key: string; label: string; icon: string }[] = [
+  { key: "cases", label: "القضايا", icon: "📁" },
+  { key: "clients", label: "العملاء", icon: "👥" },
+  { key: "hearings", label: "الجلسات", icon: "📅" },
+  { key: "consultations", label: "طلبات الاستشارة", icon: "📩" },
+  { key: "service-requests", label: "طلبات الخدمة", icon: "📋" },
+  { key: "accounting", label: "النظام المحاسبي", icon: "📒" },
+  { key: "quotes", label: "عروض الأسعار", icon: "📝" },
+  { key: "payment-requests", label: "طلبات الصرف", icon: "💸" },
+  { key: "payees", label: "المستفيدون", icon: "📇" },
+  { key: "finance", label: "اللوحة المالية", icon: "📊" },
+  { key: "analytics", label: "الإحصائيات", icon: "📈" },
+  { key: "users", label: "المستخدمون", icon: "🔑" },
+  { key: "positions", label: "المسميات والصلاحيات", icon: "🛡️" },
+  { key: "settings", label: "إعدادات المكتب", icon: "⚙️" },
+];
