@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import PrintButton from "../../PrintButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function PrintVatPage({ searchParams }: { searchParams: { from?: string; to?: string } }) {
   const now = new Date();
   const fromDate = searchParams.from ? new Date(searchParams.from + "T00:00:00") : new Date(now.getFullYear(), now.getMonth(), 1);

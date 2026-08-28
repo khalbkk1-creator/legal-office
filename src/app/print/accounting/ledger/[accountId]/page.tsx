@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import PrintButton from "../../../PrintButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function PrintLedgerPage({ params }: { params: { accountId: string } }) {
   const [account, settings] = await Promise.all([
     prisma.account.findUnique({ where: { id: params.accountId } }),

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import PrintButton from "../../PrintButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function PrintStatementsPage() {
   const [accounts, lineSums, settings] = await Promise.all([
     prisma.account.findMany({ orderBy: { code: "asc" } }),

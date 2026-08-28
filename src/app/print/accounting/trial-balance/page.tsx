@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import PrintButton from "../../PrintButton";
 
+export const dynamic = "force-dynamic";
+
 const typeLabels: Record<string, string> = {
   ASSET: "أصول",
   LIABILITY: "التزامات",

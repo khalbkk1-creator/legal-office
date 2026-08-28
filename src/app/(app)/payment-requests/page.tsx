@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import PaymentRequestsScreen from "@/components/PaymentRequestsScreen";
 
+export const dynamic = "force-dynamic";
+
 export default async function PaymentRequestsPage() {
   const session = await getServerSession(authOptions);
   const user = session?.user as any;

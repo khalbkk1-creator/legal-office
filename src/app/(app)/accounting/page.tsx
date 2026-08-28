@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { upgradeChartHierarchy } from "@/lib/accounting";
 import AccountingScreen from "@/components/AccountingScreen";
 
+export const dynamic = "force-dynamic";
+
 export default async function AccountingPage({
   searchParams,
 }: {

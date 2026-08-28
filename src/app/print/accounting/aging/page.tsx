@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import PrintButton from "../../PrintButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function PrintAgingPage() {
   const [sales, settings] = await Promise.all([
     prisma.sale.findMany({
