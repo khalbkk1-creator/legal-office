@@ -20,18 +20,23 @@ const SYSTEM_MODULES = [
   { key: "settings", label: "إعدادات المكتب", icon: "⚙️" },
 ];
 
+type Department = { id: string; name: string };
+
 type Position = {
   id: string;
   name: string;
   allowedModules: string[];
   isAccountant: boolean;
   isFinancialManager: boolean;
+  departmentId: string | null;
+  department: Department | null;
   users: { id: string; name: string }[];
 };
 
 export default function PositionsPage() {
   const router = useRouter();
   const [positions, setPositions] = useState<Position[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,17 +44,21 @@ export default function PositionsPage() {
   const [modules, setModules] = useState<string[]>([]);
   const [isAccountant, setIsAccountant] = useState(false);
   const [isFinancialManager, setIsFinancialManager] = useState(false);
+  const [departmentId, setDepartmentId] = useState("");
+  const [newDepartment, setNewDepartment] = useState({ show: false, name: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   function load() {
     setLoading(true);
-    fetch("/api/positions")
-      .then((r) => r.json())
-      .then((data) => {
-        setPositions(Array.isArray(data) ? data : []);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch("/api/positions").then((r) => r.json()),
+      fetch("/api/departments").then((r) => r.json()),
+    ]).then(([positionsData, departmentsData]) => {
+      setPositions(Array.isArray(positionsData) ? positionsData : []);
+      setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
+      setLoading(false);
+    });
   }
 
   useEffect(() => {
@@ -62,6 +71,8 @@ export default function PositionsPage() {
     setModules([]);
     setIsAccountant(false);
     setIsFinancialManager(false);
+    setDepartmentId("");
+    setNewDepartment({ show: false, name: "" });
     setError("");
   }
 
@@ -71,6 +82,8 @@ export default function PositionsPage() {
     setModules(p.allowedModules);
     setIsAccountant(p.isAccountant);
     setIsFinancialManager(p.isFinancialManager);
+    setDepartmentId(p.departmentId ?? "");
+    setNewDepartment({ show: false, name: "" });
     setShowForm(true);
   }
 
@@ -78,12 +91,41 @@ export default function PositionsPage() {
     setModules((m) => (m.includes(key) ? m.filter((x) => x !== key) : [...m, key]));
   }
 
+  async function createDepartmentInline(): Promise<string | null> {
+    if (!newDepartment.name.trim()) return null;
+    const res = await fetch("/api/departments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newDepartment.name }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.id as string;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
 
-    const payload = { name, allowedModules: modules, isAccountant, isFinancialManager };
+    let finalDepartmentId = departmentId;
+    if (newDepartment.show) {
+      const createdId = await createDepartmentInline();
+      if (!createdId) {
+        setSaving(false);
+        setError("تعذر إنشاء الإدارة الجديدة");
+        return;
+      }
+      finalDepartmentId = createdId;
+    }
+
+    const payload = {
+      name,
+      allowedModules: modules,
+      isAccountant,
+      isFinancialManager,
+      departmentId: finalDepartmentId || null,
+    };
     const res = await fetch(editingId ? `/api/positions/${editingId}` : "/api/positions", {
       method: editingId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
@@ -148,6 +190,47 @@ export default function PositionsPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الإدارة</label>
+            {!newDepartment.show ? (
+              <div className="flex items-center gap-2">
+                <select
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">بدون إدارة محددة</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setNewDepartment({ show: true, name: "" })}
+                  className="text-xs text-primary-700 hover:underline whitespace-nowrap"
+                >
+                  + إدارة جديدة
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  value={newDepartment.name}
+                  onChange={(e) => setNewDepartment((n) => ({ ...n, name: e.target.value }))}
+                  placeholder="اسم الإدارة الجديدة"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setNewDepartment({ show: false, name: "" })}
+                  className="text-xs text-gray-400 hover:underline whitespace-nowrap"
+                >
+                  إلغاء
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">الشاشات المسموح الوصول لها</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {SYSTEM_MODULES.map((m) => (
@@ -198,6 +281,7 @@ export default function PositionsPage() {
           <thead className="bg-gray-50 text-gray-500 text-xs">
             <tr>
               <th className="text-right px-5 py-3 font-medium">الاسم</th>
+              <th className="text-right px-5 py-3 font-medium">الإدارة</th>
               <th className="text-right px-5 py-3 font-medium">عدد الشاشات المتاحة</th>
               <th className="text-right px-5 py-3 font-medium">أدوار الاعتماد</th>
               <th className="text-right px-5 py-3 font-medium">عدد المستخدمين</th>
@@ -208,6 +292,7 @@ export default function PositionsPage() {
             {positions.map((p) => (
               <tr key={p.id} className="border-t border-gray-50">
                 <td className="px-5 py-3 font-medium text-ink">{p.name}</td>
+                <td className="px-5 py-3 text-gray-600">{p.department?.name ?? "—"}</td>
                 <td className="px-5 py-3 text-gray-600">{p.allowedModules.length} من {SYSTEM_MODULES.length}</td>
                 <td className="px-5 py-3">
                   <div className="flex gap-1 flex-wrap">
@@ -227,7 +312,7 @@ export default function PositionsPage() {
             ))}
             {!loading && positions.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-gray-400">لا توجد مسميات وظيفية بعد.</td>
+                <td colSpan={6} className="px-5 py-10 text-center text-gray-400">لا توجد مسميات وظيفية بعد.</td>
               </tr>
             )}
           </tbody>

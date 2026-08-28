@@ -8,7 +8,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const positions = await prisma.position.findMany({
-    include: { users: { select: { id: true, name: true } } },
+    include: { users: { select: { id: true, name: true } }, department: true },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(positions);
@@ -28,11 +28,12 @@ export async function POST(req: NextRequest) {
   const allowedModules = Array.isArray(body.allowedModules) ? body.allowedModules : [];
   const isAccountant = !!body.isAccountant;
   const isFinancialManager = !!body.isFinancialManager;
+  const departmentId = body.departmentId || undefined;
 
   if (!name) return NextResponse.json({ error: "اسم المسمى الوظيفي مطلوب" }, { status: 400 });
 
   const created = await prisma.position.create({
-    data: { name, allowedModules, isAccountant, isFinancialManager },
+    data: { name, allowedModules, isAccountant, isFinancialManager, departmentId },
   });
 
   return NextResponse.json(created, { status: 201 });

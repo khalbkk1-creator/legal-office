@@ -562,12 +562,24 @@ model Sale {
   @@schema("public")
 }
 
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique // اسم الإدارة (مثال: الإدارة المالية، الإدارة القانونية)
+  createdAt DateTime @default(now())
+
+  positions Position[]
+
+  @@schema("public")
+}
+
 model Position {
   id                 String   @id @default(cuid())
   name               String   @unique // المسمى الوظيفي (مثال: محاسب، مدير مالي)
   allowedModules     String[] @default([]) // الشاشات المسموح الوصول لها
   isAccountant       Boolean  @default(false) // يعتمد كمرحلة "المحاسب" بطلبات الصرف
   isFinancialManager Boolean  @default(false) // يعتمد كمرحلة "المدير المالي" بطلبات الصرف
+  departmentId       String?
+  department         Department? @relation(fields: [departmentId], references: [id])
   createdAt          DateTime @default(now())
 
   users User[]

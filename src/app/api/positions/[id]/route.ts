@@ -18,6 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (Array.isArray(body.allowedModules)) data.allowedModules = body.allowedModules;
   if ("isAccountant" in body) data.isAccountant = !!body.isAccountant;
   if ("isFinancialManager" in body) data.isFinancialManager = !!body.isFinancialManager;
+  if ("departmentId" in body) data.departmentId = body.departmentId || null;
 
   const updated = await prisma.position.update({ where: { id: params.id }, data });
   return NextResponse.json(updated);
