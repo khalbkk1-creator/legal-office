@@ -20,7 +20,7 @@ export async function GET() {
   if (guard.error) return guard.error;
 
   const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true, managerId: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(users);
@@ -63,4 +63,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(created, { status: 201 });
 }
-

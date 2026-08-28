@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   if (type === "trial-balance") {
     const accounts = await prisma.account.findMany({ orderBy: { code: "asc" } });
-    const lineSums = await prisma.journalEntryLine.groupBy({ by: ["accountId"], _sum: { debit: true, credit: true } });
+    const lineSums = await prisma.journalEntryLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED" } }, _sum: { debit: true, credit: true } });
     const sumsByAccount: Record<string, { debit: number; credit: number }> = {};
     for (const s of lineSums) sumsByAccount[s.accountId] = { debit: s._sum.debit ?? 0, credit: s._sum.credit ?? 0 };
 
@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
           "مدين": l.debit,
           "دائن": l.credit,
           "بواسطة": e.createdBy?.name ?? "",
+          "الحالة": e.status === "DRAFT" ? "مسودة" : "معتمد",
         });
       }
     }
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
 
   if (type === "statements") {
     const accounts = await prisma.account.findMany({ orderBy: { code: "asc" } });
-    const lineSums = await prisma.journalEntryLine.groupBy({ by: ["accountId"], _sum: { debit: true, credit: true } });
+    const lineSums = await prisma.journalEntryLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED" } }, _sum: { debit: true, credit: true } });
     const sumsByAccount: Record<string, { debit: number; credit: number }> = {};
     for (const s of lineSums) sumsByAccount[s.accountId] = { debit: s._sum.debit ?? 0, credit: s._sum.credit ?? 0 };
 
@@ -166,6 +167,33 @@ export async function GET(req: NextRequest) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesRows), "فواتير المخرجات");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows), "مصاريف المدخلات");
     return toXlsxResponse(wb, `تقرير-ضريبة-القيمة-المضافة-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  if (type === "aging") {
+    const sales = await prisma.sale.findMany({
+      where: { paymentStatus: { not: "PAID" } },
+      include: { client: true },
+      orderBy: { saleDate: "asc" },
+    });
+    const now = new Date();
+    const rows = sales
+      .filter((s) => s.totalAmount - s.paidAmount > 0.01)
+      .map((s) => {
+        const days = Math.max(0, Math.floor((now.getTime() - s.saleDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const bucket = days <= 30 ? "0-30" : days <= 60 ? "31-60" : days <= 90 ? "61-90" : "أكثر من 90";
+        return {
+          "الفاتورة": s.invoiceNumber,
+          "العميل": s.client.name,
+          "التاريخ": s.saleDate.toLocaleDateString("ar-SA"),
+          "عدد الأيام": days,
+          "الفئة": bucket,
+          "المبلغ المستحق": s.totalAmount - s.paidAmount,
+        };
+      });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "أعمار الديون");
+    return toXlsxResponse(wb, `أعمار-الديون-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   return NextResponse.json({ error: "نوع التقرير غير معروف" }, { status: 400 });

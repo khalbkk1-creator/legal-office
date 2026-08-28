@@ -22,6 +22,35 @@ const DEFAULT_ACCOUNTS: { code: string; name: string; type: "ASSET" | "LIABILITY
   { code: "5100", name: "مصروفات تشغيلية عامة", type: "EXPENSE", parentCode: "5000", isSystem: true },
 ];
 
+export async function getPeriodLock() {
+  return prisma.accountingPeriodLock.findFirst({ orderBy: { createdAt: "desc" } });
+}
+
+export async function assertDateNotLocked(date: Date) {
+  const lock = await getPeriodLock();
+  if (lock && date <= lock.lockedUntil) {
+    throw new Error(
+      `هذا التاريخ (${date.toLocaleDateString("ar-SA")}) ضمن فترة مقفلة (حتى ${lock.lockedUntil.toLocaleDateString("ar-SA")})، لا يمكن الترحيل أو التعديل فيها`
+    );
+  }
+}
+
+export async function getOrCreatePayeeAccount(name: string): Promise<string> {
+  await upgradeChartHierarchy();
+
+  const parent = await prisma.account.findUnique({ where: { code: "2100" } });
+  const lastChild = await prisma.account.findFirst({
+    where: { parentId: parent?.id },
+    orderBy: { code: "desc" },
+  });
+  const nextCode = lastChild ? (parseInt(lastChild.code, 10) + 1).toString() : "2101";
+
+  const created = await prisma.account.create({
+    data: { code: nextCode, name: `ذمم دائنة — ${name}`, type: "LIABILITY", parentId: parent?.id },
+  });
+  return created.id;
+}
+
 export async function ensureChartOfAccounts() {
   const count = await prisma.account.count();
   if (count > 0) return;
@@ -51,6 +80,7 @@ const LEVEL3_NEW_ACCOUNTS: { code: string; name: string; type: "ASSET" | "LIABIL
   { code: "1210", name: "أثاث ومعدات مكتبية", type: "ASSET", parentCode: "1002" },
   { code: "1220", name: "أجهزة حاسوب وبرمجيات", type: "ASSET", parentCode: "1002" },
   { code: "1150", name: "ضريبة القيمة المضافة القابلة للخصم (مدخلات)", type: "ASSET", parentCode: "1001" },
+  { code: "3300", name: "الأرصدة الافتتاحية", type: "EQUITY", parentCode: "3001" },
 ];
 
 // الحسابات الحالية اللي ننقلها لتصير تحت مستوى 2 الجديد (بدل ما تكون مباشرة تحت المستوى 1)
@@ -158,6 +188,7 @@ export async function postJournalEntry(params: {
   sourceType?: string;
   sourceId?: string;
   createdById?: string;
+  status?: "DRAFT" | "POSTED";
   lines: { accountId: string; debit?: number; credit?: number; description?: string }[];
 }) {
   const totalDebit = params.lines.reduce((sum, l) => sum + (l.debit ?? 0), 0);
@@ -174,6 +205,7 @@ export async function postJournalEntry(params: {
       entryNumber,
       date: params.date ?? new Date(),
       description: params.description,
+      status: params.status ?? "POSTED",
       sourceType: params.sourceType,
       sourceId: params.sourceId,
       createdById: params.createdById,

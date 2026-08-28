@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSystemAccountId, postJournalEntry } from "@/lib/accounting";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -48,6 +49,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data,
     include: { client: true, case: true },
   });
+
+  const user = session.user as any;
+  if ("amount" in body && existing && existing.amount !== updated.amount) {
+    await logAudit({
+      userId: user.id,
+      userName: user.name,
+      action: "UPDATE",
+      entityType: "Sale",
+      entityId: updated.id,
+      description: `غيّر مبلغ فاتورة ${updated.invoiceNumber}: من ${existing.amount} إلى ${updated.amount} ر.س`,
+    });
+  }
 
   if ("paidAmount" in body && existing) {
     const paymentDelta = updated.paidAmount - existing.paidAmount;

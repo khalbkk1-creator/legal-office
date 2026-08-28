@@ -11,14 +11,16 @@ export default function EditUserPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", email: "", role: "LAWYER", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", role: "LAWYER", phone: "", password: "", managerId: "" });
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/users")
       .then((r) => r.json())
       .then((users) => {
+        setAllUsers(users.filter((x: any) => x.id !== id));
         const u = users.find((x: any) => x.id === id);
-        if (u) setForm({ name: u.name, email: u.email, role: u.role, phone: u.phone ?? "", password: "" });
+        if (u) setForm({ name: u.name, email: u.email, role: u.role, phone: u.phone ?? "", password: "", managerId: u.managerId ?? "" });
         setLoading(false);
       });
   }, [id]);
@@ -40,6 +42,7 @@ export default function EditUserPage() {
         role: form.role,
         phone: form.phone,
         password: form.password || undefined,
+        managerId: form.managerId || null,
       }),
     });
 
@@ -113,6 +116,21 @@ export default function EditUserPage() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">المدير المباشر</label>
+          <select
+            value={form.managerId}
+            onChange={(e) => update("managerId", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">بدون مدير مباشر</option>
+            {allUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">إذا حددت مدير، طلبات الصرف لهذا الموظف تحتاج اعتماده أولاً قبل المالية.</p>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">كلمة مرور جديدة (اختياري)</label>
           <input
             value={form.password}
@@ -144,4 +162,3 @@ export default function EditUserPage() {
     </div>
   );
 }
-

@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: { accountId: 
   if (!account) return NextResponse.json({ error: "الحساب غير موجود" }, { status: 404 });
 
   const lines = await prisma.journalEntryLine.findMany({
-    where: { accountId: params.accountId },
+    where: { accountId: params.accountId, journalEntry: { status: "POSTED" } },
     include: { journalEntry: true },
     orderBy: [{ journalEntry: { date: "asc" } }, { journalEntry: { entryNumber: "asc" } }],
   });

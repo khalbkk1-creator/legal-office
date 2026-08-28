@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -22,6 +23,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const updated = await prisma.account.update({ where: { id: params.id }, data });
+
+  const user = session.user as any;
+  await logAudit({
+    userId: user.id,
+    userName: user.name,
+    action: "UPDATE",
+    entityType: "Account",
+    entityId: updated.id,
+    description: `عدّل حساب: ${account.code} — ${account.name} ← ${updated.code} — ${updated.name}`,
+  });
+
   return NextResponse.json(updated);
 }
 
@@ -46,5 +58,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   }
 
   await prisma.account.delete({ where: { id: params.id } });
+
+  const user = session.user as any;
+  await logAudit({
+    userId: user.id,
+    userName: user.name,
+    action: "DELETE",
+    entityType: "Account",
+    entityId: params.id,
+    description: `حذف حساب: ${account.code} — ${account.name}`,
+  });
+
   return NextResponse.json({ ok: true });
 }

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureChartOfAccounts } from "@/lib/accounting";
+import { logAudit } from "@/lib/audit";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -28,5 +29,16 @@ export async function POST(req: NextRequest) {
   const created = await prisma.account.create({
     data: { code, name, type, parentId: body.parentId || undefined },
   });
+
+  const user = session.user as any;
+  await logAudit({
+    userId: user.id,
+    userName: user.name,
+    action: "CREATE",
+    entityType: "Account",
+    entityId: created.id,
+    description: `أنشأ حساب جديد: ${created.code} — ${created.name}`,
+  });
+
   return NextResponse.json(created, { status: 201 });
 }

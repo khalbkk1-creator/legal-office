@@ -34,6 +34,9 @@ export async function GET() {
     hearingsMissingReports,
     unassignedCases,
     allCaseMessages,
+    draftJournalEntries,
+    paymentRequestsAwaitingInvoice,
+    paymentRequestsAwaitingClosure,
   ] = await Promise.all([
     prisma.serviceRequest.findMany({ where: { status: "NEW" }, include: { client: true } }),
     prisma.serviceRequest.findMany({ where: { status: "DOCS_SUBMITTED" }, include: { client: true } }),
@@ -73,6 +76,16 @@ export async function GET() {
     prisma.caseMessage.findMany({
       orderBy: { createdAt: "desc" },
       include: { case: { include: { client: true } } },
+    }),
+    prisma.journalEntry.findMany({ where: { status: "DRAFT" }, orderBy: { createdAt: "asc" } }),
+    prisma.paymentRequest.findMany({
+      where: { status: "PAID", invoiceUrl: null },
+      include: { requestedBy: true },
+      orderBy: { paidAt: "asc" },
+    }),
+    prisma.paymentRequest.findMany({
+      where: { status: "PAID", invoiceUrl: { not: null } },
+      orderBy: { invoiceUploadedAt: "asc" },
     }),
   ]);
 
@@ -228,6 +241,45 @@ export async function GET() {
         date: m.createdAt.toISOString(),
       });
     }
+  }
+
+  if (draftJournalEntries.length > 0) {
+    const oldest = draftJournalEntries[0];
+    notifications.push({
+      id: "drafts-pending",
+      icon: "📝",
+      title: `${draftJournalEntries.length} قيد مسودة بانتظار الاعتماد`,
+      description: `أقدم مسودة: ${oldest.description}`,
+      href: "/accounting?tab=journal",
+      urgency: draftJournalEntries.length >= 5 ? "high" : "medium",
+      date: oldest.createdAt.toISOString(),
+    });
+  }
+
+  if (paymentRequestsAwaitingInvoice.length > 0) {
+    for (const r of paymentRequestsAwaitingInvoice.slice(0, 5)) {
+      notifications.push({
+        id: `pr-invoice-${r.id}`,
+        icon: "🧾",
+        title: `مطلوب إرفاق فاتورة المورد — ${r.requestNumber}`,
+        description: `بانتظار ${r.requestedBy.name} لإرفاق فاتورة المورد لسلفة بمبلغ ${r.amount.toLocaleString()} ر.س`,
+        href: "/payment-requests",
+        urgency: "medium",
+        date: (r.paidAt ?? r.createdAt).toISOString(),
+      });
+    }
+  }
+
+  if (paymentRequestsAwaitingClosure.length > 0) {
+    notifications.push({
+      id: "pr-closure-pending",
+      icon: "✅",
+      title: `${paymentRequestsAwaitingClosure.length} طلب صرف بانتظار إقفال الفاتورة`,
+      description: "فاتورة المورد مرفقة، بانتظار اعتماد الإقفال من المالية",
+      href: "/payment-requests",
+      urgency: "high",
+      date: paymentRequestsAwaitingClosure[0].createdAt.toISOString(),
+    });
   }
 
   const order = { high: 0, medium: 1, low: 2 };

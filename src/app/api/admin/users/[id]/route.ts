@@ -24,6 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name;
   if (typeof body.phone === "string") data.phone = body.phone || null;
   if (["PARTNER", "LAWYER", "SECRETARY"].includes(body.role)) data.role = body.role;
+  if ("managerId" in body) data.managerId = body.managerId || null;
 
   if (typeof body.password === "string" && body.password.trim()) {
     if (body.password.length < 6) {
@@ -35,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const updated = await prisma.user.update({
     where: { id: params.id },
     data,
-    select: { id: true, name: true, email: true, role: true, phone: true },
+    select: { id: true, name: true, email: true, role: true, phone: true, managerId: true },
   });
 
   return NextResponse.json(updated);
@@ -53,4 +54,3 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   await prisma.user.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }
-

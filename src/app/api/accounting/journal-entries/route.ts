@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { postJournalEntry } from "@/lib/accounting";
+import { postJournalEntry, assertDateNotLocked } from "@/lib/accounting";
+import { logAudit } from "@/lib/audit";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -30,12 +31,26 @@ export async function POST(req: NextRequest) {
   const user = session.user as any;
 
   try {
+    const entryDate = body.date ? new Date(body.date) : new Date();
+    const status = body.status === "DRAFT" ? "DRAFT" : "POSTED";
+    if (status === "POSTED") {
+      await assertDateNotLocked(entryDate);
+    }
     const created = await postJournalEntry({
       description,
       sourceType: "MANUAL",
       createdById: user.id,
-      date: body.date ? new Date(body.date) : undefined,
+      date: entryDate,
+      status,
       lines,
+    });
+    await logAudit({
+      userId: user.id,
+      userName: user.name,
+      action: "CREATE",
+      entityType: "JournalEntry",
+      entityId: created.id,
+      description: `أنشأ قيد يدوي: ${created.entryNumber} — ${description}`,
     });
     return NextResponse.json(created, { status: 201 });
   } catch (e: any) {

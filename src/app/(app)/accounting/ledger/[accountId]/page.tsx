@@ -30,7 +30,7 @@ export default async function LedgerPage({ params }: { params: { accountId: stri
   if (!account) notFound();
 
   const lines = await prisma.journalEntryLine.findMany({
-    where: { accountId: params.accountId },
+    where: { accountId: params.accountId, journalEntry: { status: "POSTED" } },
     include: { journalEntry: true },
     orderBy: [{ journalEntry: { date: "asc" } }, { journalEntry: { entryNumber: "asc" } }],
   });
@@ -53,12 +53,21 @@ export default async function LedgerPage({ params }: { params: { accountId: stri
           <Link href="/accounting" className="text-sm text-primary-700 hover:underline mb-2 inline-block">
             ‹ رجوع للنظام المحاسبي
           </Link>
-          <a
-            href={`/api/accounting/export-ledger/${account.id}`}
-            className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
-          >
-            📊 تصدير Excel
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/print/accounting/ledger/${account.id}`}
+              target="_blank"
+              className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
+            >
+              🖨️ PDF
+            </a>
+            <a
+              href={`/api/accounting/export-ledger/${account.id}`}
+              className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 inline-flex items-center gap-1"
+            >
+              📊 تصدير Excel
+            </a>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-ink">{account.code} — {account.name}</h1>

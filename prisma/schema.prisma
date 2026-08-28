@@ -139,6 +139,7 @@ model ExpenseCategory {
   name      String    @unique
   createdAt DateTime  @default(now())
   expenses  Expense[]
+  paymentRequests PaymentRequest[]
 
   @@schema("public")
 }
@@ -149,6 +150,8 @@ model Expense {
   amount      Float
   vatAmount   Float    @default(0) // ضريبة القيمة المضافة المدفوعة ضمن المصروف (مدخلات)
   expenseDate DateTime @default(now())
+  receiptUrl  String?
+  receiptName String?
 
   categoryId String?
   category   ExpenseCategory? @relation(fields: [categoryId], references: [id])
@@ -284,6 +287,10 @@ model Account {
   createdAt DateTime   @default(now())
 
   journalLines JournalEntryLine[]
+  recurringLines RecurringEntryLine[]
+  bankStatementLines BankStatementLine[]
+  reconciliationRecords ReconciliationRecord[]
+  payee Payee?
 
   @@index([type])
   @@index([parentId])
@@ -295,6 +302,7 @@ model JournalEntry {
   entryNumber String   @unique // رقم القيد
   date        DateTime @default(now())
   description String
+  status      String   @default("POSTED") // DRAFT / POSTED — المسودة لا تدخل بالأرصدة
   sourceType  String? // SALE / EXPENSE / PAYMENT / MANUAL
   sourceId    String? // معرّف السجل المصدر إن وجد
 
@@ -304,6 +312,9 @@ model JournalEntry {
   reversalOfId String?       @unique
   reversalOf   JournalEntry? @relation("EntryReversal", fields: [reversalOfId], references: [id])
   reversedBy   JournalEntry? @relation("EntryReversal")
+
+  attachmentUrl  String?
+  attachmentName String?
 
   createdAt DateTime @default(now())
   lines     JournalEntryLine[]
@@ -325,6 +336,172 @@ model JournalEntryLine {
 
   @@index([journalEntryId])
   @@index([accountId])
+  @@schema("public")
+}
+
+model ReconciliationRecord {
+  id             String   @id @default(cuid())
+  accountId      String
+  account        Account  @relation(fields: [accountId], references: [id])
+  reconciledDate DateTime
+  bookBalance    Float // الرصيد حسب دفتر الأستاذ وقت المطابقة
+  bankBalance    Float // الرصيد حسب كشف الحساب البنكي (يُدخل يدوياً)
+  difference     Float
+  notes          String?
+
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([accountId])
+  @@schema("public")
+}
+
+model BankStatementLine {
+  id              String   @id @default(cuid())
+  accountId       String
+  account         Account  @relation(fields: [accountId], references: [id])
+  date            DateTime
+  description     String
+  amount          Float // موجب = إيداع، سالب = سحب
+  matched         Boolean  @default(false)
+  matchedLineId   String? // معرّف سطر القيد المطابق (JournalEntryLine.id) بدون علاقة صارمة
+  createdAt       DateTime @default(now())
+
+  @@index([accountId])
+  @@schema("public")
+}
+
+model RecurringEntry {
+  id             String   @id @default(cuid())
+  description    String
+  dayOfMonth     Int      @default(1) // يوم الترحيل المقترح كل شهر (1-28)
+  isActive       Boolean  @default(true)
+  lastPostedYear  Int?
+  lastPostedMonth Int?
+
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  lines RecurringEntryLine[]
+
+  @@schema("public")
+}
+
+model RecurringEntryLine {
+  id               String         @id @default(cuid())
+  recurringEntryId String
+  recurringEntry   RecurringEntry @relation(fields: [recurringEntryId], references: [id], onDelete: Cascade)
+  accountId        String
+  account          Account        @relation(fields: [accountId], references: [id])
+  debit            Float          @default(0)
+  credit           Float          @default(0)
+
+  @@schema("public")
+}
+
+model Payee {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("INDIVIDUAL") // INDIVIDUAL / COMPANY
+  phone     String?
+  notes     String?
+  accountId String   @unique // حساب ذمم دائنة مستقل لهذا الشخص/الجهة
+  account   Account  @relation(fields: [accountId], references: [id])
+  createdAt DateTime @default(now())
+
+  paymentRequests PaymentRequest[]
+
+  @@schema("public")
+}
+
+model PaymentRequest {
+  id            String   @id @default(cuid())
+  requestNumber String   @unique
+  description   String
+  amount        Float
+  vatAmount     Float    @default(0)
+
+  payeeId String
+  payee   Payee  @relation(fields: [payeeId], references: [id])
+
+  categoryId String?
+  category   ExpenseCategory? @relation(fields: [categoryId], references: [id])
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id])
+
+  requestedById String
+  requestedBy   User   @relation("RequestedPayments", fields: [requestedById], references: [id])
+
+  status String @default("PENDING_MANAGER") // PENDING_MANAGER / PENDING_FINANCE / APPROVED / REJECTED / PAID
+
+  needsManagerApproval Boolean @default(true)
+  managerApprovedById  String?
+  managerApprovedBy    User?     @relation("ManagerApprovedPayments", fields: [managerApprovedById], references: [id])
+  managerApprovedAt    DateTime?
+  managerNote          String?
+
+  financeApprovedById String?
+  financeApprovedBy   User?     @relation("FinanceApprovedPayments", fields: [financeApprovedById], references: [id])
+  financeApprovedAt   DateTime?
+  financeNote         String?
+
+  rejectedById    String?
+  rejectedBy      User?     @relation("RejectedPayments", fields: [rejectedById], references: [id])
+  rejectedAt      DateTime?
+  rejectionReason String?
+
+  paymentAccountId  String?
+  paidAt            DateTime?
+  transferProofUrl  String?
+  transferProofName String?
+
+  invoiceUrl       String?
+  invoiceName      String?
+  invoiceUploadedAt DateTime?
+
+  closedById String?
+  closedBy   User?     @relation("ClosedPayments", fields: [closedById], references: [id])
+  closedAt   DateTime?
+
+  attachmentUrl  String
+  attachmentName String
+
+  liabilityJournalEntryId String? @unique
+  paymentJournalEntryId   String? @unique
+  closingJournalEntryId   String? @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([requestedById])
+  @@schema("public")
+}
+
+model AccountingPeriodLock {
+  id           String   @id @default(cuid())
+  lockedUntil  DateTime // كل قيد بتاريخ أقدم أو يساوي هذا التاريخ يصير مقفل
+  lockedById   String?
+  lockedByName String
+  createdAt    DateTime @default(now())
+
+  @@schema("public")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  userName    String // مخزّن مباشرة حتى لو انحذف المستخدم لاحقاً
+  action      String // CREATE / UPDATE / DELETE / REVERSE / RESET
+  entityType  String // Account / JournalEntry / Sale / Expense ...
+  entityId    String?
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
   @@schema("public")
 }
 
@@ -389,6 +566,10 @@ model User {
   phone        String?
   createdAt    DateTime @default(now())
 
+  managerId String?
+  manager   User?   @relation("ManagerOf", fields: [managerId], references: [id])
+  directReports User[] @relation("ManagerOf")
+
   assignedCases Case[]        @relation("AssignedLawyer")
   caseUpdates   CaseUpdate[]
   uploadedDocuments CaseDocument[]
@@ -398,6 +579,14 @@ model User {
   timeEntries   TimeEntry[]
   consultationNotes ConsultationNote[]
   journalEntries JournalEntry[]
+  recurringEntries RecurringEntry[]
+  reconciliationRecords ReconciliationRecord[]
+
+  requestedPayments      PaymentRequest[] @relation("RequestedPayments")
+  managerApprovedPayments PaymentRequest[] @relation("ManagerApprovedPayments")
+  financeApprovedPayments PaymentRequest[] @relation("FinanceApprovedPayments")
+  rejectedPayments        PaymentRequest[] @relation("RejectedPayments")
+  closedPayments          PaymentRequest[] @relation("ClosedPayments")
 
   @@schema("public")
 }
@@ -462,6 +651,7 @@ model Case {
   expenses    Expense[]
   messages    CaseMessage[]
   timeEntries TimeEntry[]
+  paymentRequests PaymentRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

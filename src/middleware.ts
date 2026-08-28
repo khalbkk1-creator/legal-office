@@ -10,6 +10,8 @@ export const config = {
     "/expenses/:path*",
     "/finance/:path*",
     "/accounting/:path*",
+    "/payment-requests/:path*",
+    "/payees/:path*",
     "/analytics/:path*",
     "/quotes/:path*",
     "/users/:path*",

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { getSystemAccountId, postJournalEntry } from "@/lib/accounting";
+import { getSystemAccountId, postJournalEntry, assertDateNotLocked } from "@/lib/accounting";
 
 const saleSchema = z.object({
   clientId: z.string().min(1),
@@ -51,6 +51,13 @@ export async function POST(req: NextRequest) {
   const user = session.user as any;
   const invoiceNumber = await nextInvoiceNumber();
 
+  const resolvedSaleDate = saleDate ? new Date(saleDate) : new Date();
+  try {
+    await assertDateNotLocked(resolvedSaleDate);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 400 });
+  }
+
   const created = await prisma.sale.create({
     data: {
       invoiceNumber,
@@ -61,7 +68,7 @@ export async function POST(req: NextRequest) {
       applyVat,
       vatAmount,
       totalAmount,
-      saleDate: saleDate ? new Date(saleDate) : undefined,
+      saleDate: resolvedSaleDate,
       createdById: user.id,
     },
     include: { client: true, case: true },

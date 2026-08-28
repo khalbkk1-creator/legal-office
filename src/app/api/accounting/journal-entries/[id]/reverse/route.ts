@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { postJournalEntry } from "@/lib/accounting";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -38,6 +39,15 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   await prisma.journalEntry.update({
     where: { id: reversal.id },
     data: { reversalOfId: original.id },
+  });
+
+  await logAudit({
+    userId: user.id,
+    userName: user.name,
+    action: "REVERSE",
+    entityType: "JournalEntry",
+    entityId: original.id,
+    description: `عكس قيد: ${original.entryNumber} بالقيد الجديد ${reversal.entryNumber}`,
   });
 
   return NextResponse.json(reversal, { status: 201 });

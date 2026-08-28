@@ -8,12 +8,24 @@ export default async function DashboardPage() {
   const user = session?.user as any;
   const isPartner = user?.role === "PARTNER";
 
-  const [activeCases, newRequests, pendingConsultations, unpaidInvoices] = await Promise.all([
+  const [activeCases, newRequests, pendingConsultations, unpaidInvoices, pendingPaymentRequests] = await Promise.all([
     prisma.case.count({ where: { status: { not: "CLOSED" } } }),
     prisma.serviceRequest.count({ where: { status: "NEW" } }),
     prisma.consultationRequest.count({ where: { status: "PENDING" } }),
     prisma.sale.count({ where: { paymentStatus: { not: "PAID" } } }),
+    prisma.paymentRequest.findMany({
+      where: { status: { in: ["PENDING_MANAGER", "PENDING_FINANCE", "APPROVED", "PAID"] } },
+      select: { status: true, invoiceUrl: true, requestedBy: { select: { managerId: true } } },
+    }),
   ]);
+
+  const myPendingPaymentRequests = pendingPaymentRequests.filter((r) => {
+    if (r.status === "PENDING_MANAGER") return r.requestedBy.managerId === user?.id || isPartner;
+    if (r.status === "PENDING_FINANCE") return isPartner;
+    if (r.status === "APPROVED") return isPartner;
+    if (r.status === "PAID" && r.invoiceUrl) return isPartner;
+    return false;
+  }).length;
 
   const items: { href: string; label: string; icon: string; badge?: number; partnerOnly?: boolean }[] = [
     { href: "/cases", label: "القضايا", icon: "📁", badge: activeCases || undefined },
@@ -22,6 +34,7 @@ export default async function DashboardPage() {
     { href: "/consultations", label: "طلبات الاستشارة", icon: "📩", badge: pendingConsultations || undefined },
     { href: "/service-requests", label: "طلبات الخدمة", icon: "📋", badge: newRequests || undefined },
     { href: "/accounting", label: "النظام المحاسبي", icon: "📒", badge: unpaidInvoices || undefined },
+    { href: "/payment-requests", label: "طلبات الصرف", icon: "💸", badge: myPendingPaymentRequests || undefined },
     { href: "/quotes", label: "عروض الأسعار", icon: "📝" },
     { href: "/finance", label: "اللوحة المالية", icon: "📊" },
     { href: "/analytics", label: "الإحصائيات", icon: "📈" },

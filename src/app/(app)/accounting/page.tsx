@@ -9,7 +9,7 @@ export default async function AccountingPage({
 }) {
   await upgradeChartHierarchy();
 
-  const [accounts, entries, lineSums, sales, expenses] = await Promise.all([
+  const [accounts, entries, lineSums, sales, expenses, auditLog, openingBalanceEntry, periodLock, recurringEntries] = await Promise.all([
     prisma.account.findMany({ orderBy: { code: "asc" } }),
     prisma.journalEntry.findMany({
       include: { lines: { include: { account: true } }, createdBy: true, reversedBy: true },
@@ -18,10 +18,15 @@ export default async function AccountingPage({
     }),
     prisma.journalEntryLine.groupBy({
       by: ["accountId"],
+      where: { journalEntry: { status: "POSTED" } },
       _sum: { debit: true, credit: true },
     }),
     prisma.sale.findMany({ include: { client: true, case: true }, orderBy: { saleDate: "desc" } }),
     prisma.expense.findMany({ include: { category: true, case: true }, orderBy: { expenseDate: "desc" } }),
+    prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 200 }),
+    prisma.journalEntry.findFirst({ where: { sourceType: "OPENING_BALANCE" }, include: { lines: true } }),
+    prisma.accountingPeriodLock.findFirst({ orderBy: { createdAt: "desc" } }),
+    prisma.recurringEntry.findMany({ include: { lines: { include: { account: true } } }, orderBy: { createdAt: "desc" } }),
   ]);
 
   const sumsByAccount: Record<string, { debit: number; credit: number }> = {};
@@ -73,7 +78,7 @@ export default async function AccountingPage({
   }
   const topCategories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3) as [string, number][];
 
-  const validTabs = ["invoices", "expenses", "journal", "accounts", "trial"];
+  const validTabs = ["invoices", "expenses", "journal", "accounts", "trial", "statements", "vat", "audit", "aging", "opening", "lock", "recurring"];
   const initialTab = validTabs.includes(searchParams.tab ?? "") ? (searchParams.tab as any) : "journal";
 
   return (
@@ -85,6 +90,10 @@ export default async function AccountingPage({
       expenses={expenses.map((e) => ({ ...e, expenseDate: e.expenseDate.toISOString() }))}
       salesSummary={{ totalThisMonth, totalOutstanding, topCases }}
       expenseSummary={{ totalThisMonth: expenseTotalThisMonth, topCategories }}
+      auditLog={JSON.parse(JSON.stringify(auditLog))}
+      openingBalanceEntry={JSON.parse(JSON.stringify(openingBalanceEntry))}
+      periodLock={JSON.parse(JSON.stringify(periodLock))}
+      recurringEntries={JSON.parse(JSON.stringify(recurringEntries))}
       initialTab={initialTab}
     />
   );
