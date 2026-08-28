@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,15 +10,21 @@ html {
 }
 
 body {
-  background-color: #f6f7f8;
-  color: #1a1f1e;
+  background-color: #f5f6f7;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(31, 83, 72, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(31, 83, 72, 0.03) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: #161b1a;
   font-family: "IBM Plex Sans Arabic", "Tahoma", "Segoe UI", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.006em;
 }
 
 ::selection {
-  background-color: #b9dad4;
+  background-color: #b0d6cc;
+  color: #161b1a;
 }
 
 /* شريط تمرير أنعم واحترافي */
@@ -32,13 +38,94 @@ body {
 ::-webkit-scrollbar-thumb {
   background-color: #d1d9d7;
   border-radius: 999px;
-  border: 2px solid #f6f7f8;
+  border: 2px solid #f5f6f7;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #b9c4c1;
+  background-color: #a8b6b2;
 }
 
-/* انتقالات هادئة على العناصر التفاعلية بشكل افتراضي */
+@layer base {
+  h1 {
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  h2, h3 {
+    letter-spacing: -0.012em;
+    font-weight: 600;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  a:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(38, 102, 90, 0.18);
+    border-color: #559d8c !important;
+  }
+
+  ::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+  }
+
+  button:not(:disabled):active {
+    transform: scale(0.98);
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: #1f5348;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  thead th {
+    font-weight: 600;
+    letter-spacing: -0.006em;
+  }
+  tbody tr {
+    transition: background-color 0.12s ease;
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+@layer components {
+  .card-hover {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -8px rgba(22, 27, 26, 0.12);
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, #eceeed 25%, #f5f6f6 37%, #eceeed 63%);
+    background-size: 400% 100%;
+    animation: skeleton-pulse 1.4s ease infinite;
+  }
+  @keyframes skeleton-pulse {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+  }
+
+  .fade-in {
+    animation: fade-in 0.25s ease both;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
 a,
 button {
   transition: all 0.15s ease;

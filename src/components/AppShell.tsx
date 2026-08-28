@@ -23,11 +23,12 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-20 bg-white/85 backdrop-blur-sm border-b border-gray-100">
+      <div className="h-[3px] bg-gradient-to-l from-primary-800 via-primary-500 to-accent-400" />
+      <header className="sticky top-0 z-20 bg-white/85 backdrop-blur-sm border-b border-gray-100 shadow-card">
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
           <Link
             href="/dashboard"
-            className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-card flex items-center justify-center shrink-0 hover:border-primary-300 hover:shadow-sm transition"
+            className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-card flex items-center justify-center shrink-0 hover:border-primary-300 hover:shadow-elevated transition"
             title="الرئيسية"
           >
             <span className="text-lg">🏠</span>
@@ -36,7 +37,7 @@ export default function AppShell({
           <NotificationBell />
           {userName && (
             <div className="flex items-center gap-2 shrink-0 pr-1">
-              <div className="w-9 h-9 rounded-full bg-primary-700 text-white flex items-center justify-center text-sm font-semibold shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 text-white flex items-center justify-center text-sm font-semibold shrink-0 shadow-card">
                 {initials}
               </div>
               <div className="hidden sm:flex flex-col leading-tight">
@@ -49,7 +50,7 @@ export default function AppShell({
           )}
         </div>
       </header>
-      <main className="max-w-6xl mx-auto p-4 md:p-8">{children}</main>
+      <main className="max-w-6xl mx-auto p-4 md:p-8 animate-fade-up">{children}</main>
     </div>
   );
 }
