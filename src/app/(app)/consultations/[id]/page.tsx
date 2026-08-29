@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import ConsultationNotes from "./ConsultationNotes";
 import ConsultationResponseUpload from "./ConsultationResponseUpload";
+import ConsultationAssignment from "./ConsultationAssignment";
 import ConsultationActions from "../ConsultationActions";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -19,11 +22,16 @@ const consultationTypeLabels: Record<string, string> = {
 };
 
 export default async function ConsultationDetailPage({ params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  const currentUser = session?.user as any;
+
   const consultation = await prisma.consultationRequest.findUnique({
     where: { id: params.id },
     include: {
       client: true,
       sale: true,
+      assignedTo: true,
+      managerApprovedBy: true,
       noteLog: { include: { author: true }, orderBy: { createdAt: "desc" } },
     },
   });
@@ -104,6 +112,16 @@ export default async function ConsultationDetailPage({ params }: { params: { id:
           />
         </div>
       )}
+
+      <ConsultationAssignment
+        consultationId={consultation.id}
+        currentUserId={currentUser?.id}
+        currentUserIsPartner={currentUser?.role === "PARTNER"}
+        assignedToId={consultation.assignedToId}
+        assignedToName={consultation.assignedTo?.name ?? null}
+        managerApprovedByName={consultation.managerApprovedBy?.name ?? null}
+        managerApprovedAt={consultation.managerApprovedAt?.toISOString() ?? null}
+      />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-bold text-ink mb-3">إجراءات</h2>
