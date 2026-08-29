@@ -3,14 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// الإجراءات المسموحة:
-// SEND_FOR_APPROVAL: تحت الدراسة -> تحت الاعتماد
-// APPROVE: تحت الاعتماد -> جارية (الشريك فقط)
-// CLOSE: جارية -> مغلقة
-// HOLD: أي حالة (غير معلقة) -> معلقة (تُحفظ الحالة السابقة)
-// RESTORE: معلقة -> الحالة السابقة قبل التعليق
-// SEND_BACK: يرجع القضية مرحلة واحدة للخلف (متاح من أي مرحلة عدا "تحت الدراسة" و"معلقة")
-
 const PREVIOUS_STAGE: Record<string, string> = {
   UNDER_APPROVAL: "UNDER_REVIEW",
   ACTIVE: "UNDER_APPROVAL",
@@ -22,29 +14,32 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const role = (session.user as any).role;
+  const userId = (session.user as any).id;
   const body = await req.json();
   const action = body.action as string;
 
-  const item = await prisma.case.findUnique({ where: { id: params.id } });
+  const item = await prisma.case.findUnique({ where: { id: params.id }, include: { lawyer: true } });
   if (!item) return NextResponse.json({ error: "القضية غير موجودة" }, { status: 404 });
 
   if (action === "SEND_FOR_APPROVAL") {
     if (item.status !== "UNDER_REVIEW") {
       return NextResponse.json({ error: "هذا الإجراء متاح فقط للقضايا تحت الدراسة" }, { status: 400 });
     }
+    const needsApproval = !!item.lawyer?.managerId;
     const updated = await prisma.case.update({
       where: { id: params.id },
-      data: { status: "UNDER_APPROVAL" },
+      data: { status: needsApproval ? "UNDER_APPROVAL" : "ACTIVE" },
     });
     return NextResponse.json(updated);
   }
 
   if (action === "APPROVE") {
-    if (role !== "PARTNER") {
-      return NextResponse.json({ error: "اعتماد القضايا متاح للشريك فقط" }, { status: 403 });
-    }
     if (item.status !== "UNDER_APPROVAL") {
       return NextResponse.json({ error: "هذا الإجراء متاح فقط للقضايا تحت الاعتماد" }, { status: 400 });
+    }
+    const isManager = item.lawyer?.managerId === userId;
+    if (!isManager && role !== "PARTNER") {
+      return NextResponse.json({ error: "اعتماد هذه القضية متاح لمدير المحامي المسؤول أو الشريك فقط" }, { status: 403 });
     }
     const updated = await prisma.case.update({
       where: { id: params.id },
