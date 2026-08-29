@@ -42,6 +42,7 @@ export default async function DashboardPage() {
     { href: "/analytics", label: "الإحصائيات", icon: "📈", moduleKey: "analytics" },
     { href: "/users", label: "المستخدمون", icon: "🔑", partnerOnly: true, moduleKey: "users" },
     { href: "/positions", label: "المسميات والصلاحيات", icon: "🛡️", partnerOnly: true, moduleKey: "positions" },
+    { href: "/api-keys", label: "مفاتيح API الخارجية", icon: "🔌", partnerOnly: true, moduleKey: "api-keys" },
     { href: "/settings", label: "إعدادات المكتب", icon: "⚙️", partnerOnly: true, moduleKey: "settings" },
   ];
   // لو عند المستخدم مسمى وظيفي محدد، نصفّي حسب صلاحياته بالضبط. لو ما عنده مسمى (حسابات قديمة)، نرجع لتصفية الدور المعتادة حفاظاً على التوافق. الشريك دائماً يشوف كل شي كصلاحية عليا ثابتة

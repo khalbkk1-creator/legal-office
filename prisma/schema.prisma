@@ -496,6 +496,35 @@ model AccountingPeriodLock {
   @@schema("public")
 }
 
+model Alert {
+  id          String   @id @default(cuid())
+  type        String // HEARING_REMINDER / APPEAL_DEADLINE / OVERDUE_INVOICE
+  title       String
+  description String
+  entityType  String // Case / Sale / Hearing
+  entityId    String
+  dueDate     DateTime? // التاريخ المرتبط بالتنبيه (موعد الجلسة، آخر يوم استئناف...)
+  emailSent   Boolean  @default(false) // جاهز لربط الإيميل لاحقاً بدون تعديل البنية
+  createdAt   DateTime @default(now())
+
+  @@unique([type, entityId, dueDate])
+  @@index([type])
+  @@schema("public")
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String // اسم وصفي (مثال: Zapier - قضايا)
+  keyHash    String    @unique // تُخزّن مشفّرة، المفتاح الحقيقي يُعرض مرة وحدة فقط عند الإنشاء
+  keyPrefix  String // أول 8 أحرف تُعرض بالواجهة للتمييز فقط (المفتاح الكامل لا يُخزّن نصياً)
+  lastUsedAt DateTime?
+  isActive   Boolean   @default(true)
+  createdById String?
+  createdAt  DateTime  @default(now())
+
+  @@schema("public")
+}
+
 model AuditLog {
   id          String   @id @default(cuid())
   userId      String?

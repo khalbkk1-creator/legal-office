@@ -12,5 +12,6 @@ export const SYSTEM_MODULES: { key: string; label: string; icon: string }[] = [
   { key: "analytics", label: "الإحصائيات", icon: "📈" },
   { key: "users", label: "المستخدمون", icon: "🔑" },
   { key: "positions", label: "المسميات والصلاحيات", icon: "🛡️" },
+  { key: "api-keys", label: "مفاتيح API الخارجية", icon: "🔌" },
   { key: "settings", label: "إعدادات المكتب", icon: "⚙️" },
 ];
