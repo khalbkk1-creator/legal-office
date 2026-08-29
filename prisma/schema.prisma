@@ -112,6 +112,14 @@ model ConsultationRequest {
   sale           Sale?    @relation(fields: [saleId], references: [id])
   responseFileUrl  String? // ملف الرد للاستشارة الكتابية
   responseFileName String?
+
+  assignedToId String? // المحامي/الموظف المسؤول عن هذه الاستشارة
+  assignedTo   User?   @relation("AssignedConsultations", fields: [assignedToId], references: [id])
+
+  managerApprovedById String?
+  managerApprovedBy   User?     @relation("ApprovedConsultations", fields: [managerApprovedById], references: [id])
+  managerApprovedAt   DateTime?
+
   createdAt      DateTime           @default(now())
 
   noteLog ConsultationNote[]
@@ -653,6 +661,8 @@ model User {
   financeApprovedPayments PaymentRequest[] @relation("FinanceApprovedPayments")
   rejectedPayments        PaymentRequest[] @relation("RejectedPayments")
   closedPayments          PaymentRequest[] @relation("ClosedPayments")
+  assignedConsultations   ConsultationRequest[] @relation("AssignedConsultations")
+  approvedConsultations   ConsultationRequest[] @relation("ApprovedConsultations")
 
   @@schema("public")
 }
