@@ -33,6 +33,7 @@ enum CaseStatus {
 enum ClientType {
   INDIVIDUAL // فرد
   COMPANY    // شركة
+  GOVERNMENT // جهة حكومية
 
   @@schema("public")
 }

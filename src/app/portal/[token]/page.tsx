@@ -68,7 +68,25 @@ export default async function ClientPortalPage({ params }: { params: { token: st
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
           <h1 className="text-xl font-bold text-ink">مرحباً، {client.name}</h1>
           <p className="text-sm text-gray-500 mt-1">اختر الشاشة اللي تبي تدخلها من الأسفل.</p>
+          <a
+            href={`/portal/${params.token}/profile`}
+            className="inline-block mt-3 text-sm text-primary-700 hover:underline"
+          >
+            👤 بياناتك (تعديل أو إكمال)
+          </a>
         </div>
+
+        {(!client.idNumber || !client.email) && (
+          <div className="bg-accent-50 border border-accent-200 rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm text-accent-800">📋 بياناتك ناقصة — أكملها لتسهيل التواصل والمعاملات.</p>
+            <a
+              href={`/portal/${params.token}/profile`}
+              className="text-xs bg-accent-600 hover:bg-accent-700 text-white rounded-lg px-3 py-1.5 shrink-0"
+            >
+              أكمل بياناتك
+            </a>
+          </div>
+        )}
 
         {(totalOutstanding > 0 || upcomingConsultations.length > 0 || upcomingHearings.length > 0) && (
           <div className="space-y-3">
