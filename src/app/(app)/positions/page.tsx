@@ -29,6 +29,11 @@ type Position = {
   allowedModules: string[];
   isAccountant: boolean;
   isFinancialManager: boolean;
+  acctCanRecord: boolean;
+  acctCanEditPosted: boolean;
+  acctCanManageChart: boolean;
+  acctCanManagePeriods: boolean;
+  acctViewOnly: boolean;
   departmentId: string | null;
   department: Department | null;
   users: { id: string; name: string }[];
@@ -45,6 +50,11 @@ export default function PositionsPage() {
   const [modules, setModules] = useState<string[]>([]);
   const [isAccountant, setIsAccountant] = useState(false);
   const [isFinancialManager, setIsFinancialManager] = useState(false);
+  const [acctCanRecord, setAcctCanRecord] = useState(false);
+  const [acctCanEditPosted, setAcctCanEditPosted] = useState(false);
+  const [acctCanManageChart, setAcctCanManageChart] = useState(false);
+  const [acctCanManagePeriods, setAcctCanManagePeriods] = useState(false);
+  const [acctViewOnly, setAcctViewOnly] = useState(false);
   const [departmentId, setDepartmentId] = useState("");
   const [newDepartment, setNewDepartment] = useState({ show: false, name: "" });
   const [saving, setSaving] = useState(false);
@@ -72,6 +82,11 @@ export default function PositionsPage() {
     setModules([]);
     setIsAccountant(false);
     setIsFinancialManager(false);
+    setAcctCanRecord(false);
+    setAcctCanEditPosted(false);
+    setAcctCanManageChart(false);
+    setAcctCanManagePeriods(false);
+    setAcctViewOnly(false);
     setDepartmentId("");
     setNewDepartment({ show: false, name: "" });
     setError("");
@@ -83,6 +98,11 @@ export default function PositionsPage() {
     setModules(p.allowedModules);
     setIsAccountant(p.isAccountant);
     setIsFinancialManager(p.isFinancialManager);
+    setAcctCanRecord(p.acctCanRecord);
+    setAcctCanEditPosted(p.acctCanEditPosted);
+    setAcctCanManageChart(p.acctCanManageChart);
+    setAcctCanManagePeriods(p.acctCanManagePeriods);
+    setAcctViewOnly(p.acctViewOnly);
     setDepartmentId(p.departmentId ?? "");
     setNewDepartment({ show: false, name: "" });
     setShowForm(true);
@@ -125,6 +145,11 @@ export default function PositionsPage() {
       allowedModules: modules,
       isAccountant,
       isFinancialManager,
+      acctCanRecord,
+      acctCanEditPosted,
+      acctCanManageChart,
+      acctCanManagePeriods,
+      acctViewOnly,
       departmentId: finalDepartmentId || null,
     };
     const res = await fetch(editingId ? `/api/positions/${editingId}` : "/api/positions", {
@@ -263,6 +288,31 @@ export default function PositionsPage() {
               <input type="checkbox" checked={isFinancialManager} onChange={(e) => setIsFinancialManager(e.target.checked)} className="accent-primary-700" />
               يعتمد كمرحلة "المدير المالي" (الاعتماد النهائي)
             </label>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+            <p className="text-xs text-blue-800 font-medium mb-1">صلاحيات دقيقة داخل النظام المحاسبي</p>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={acctCanRecord} onChange={(e) => setAcctCanRecord(e.target.checked)} className="accent-primary-700" />
+              تسجيل فواتير/مصاريف/قيود يدوية جديدة
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={acctCanEditPosted} onChange={(e) => setAcctCanEditPosted(e.target.checked)} className="accent-primary-700" />
+              تعديل أو حذف أو عكس قيود مرحّلة مسبقاً
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={acctCanManageChart} onChange={(e) => setAcctCanManageChart(e.target.checked)} className="accent-primary-700" />
+              إضافة أو تعديل أو حذف حسابات بدليل الحسابات
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={acctCanManagePeriods} onChange={(e) => setAcctCanManagePeriods(e.target.checked)} className="accent-primary-700" />
+              قفل/فك قفل الفترات المحاسبية، وإعادة تعيين الدليل
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700 pt-1 border-t border-blue-100 mt-1">
+              <input type="checkbox" checked={acctViewOnly} onChange={(e) => setAcctViewOnly(e.target.checked)} className="accent-primary-700" />
+              <span>عرض فقط (يعطّل كل الصلاحيات أعلاه بغض النظر عن تفعيلها)</span>
+            </label>
+            <p className="text-[11px] text-blue-600 mt-1">ملاحظة: الشريك يتجاوز كل هذي القيود دائماً.</p>
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}

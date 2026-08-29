@@ -19,6 +19,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if ("isAccountant" in body) data.isAccountant = !!body.isAccountant;
   if ("isFinancialManager" in body) data.isFinancialManager = !!body.isFinancialManager;
   if ("departmentId" in body) data.departmentId = body.departmentId || null;
+  if ("acctCanRecord" in body) data.acctCanRecord = !!body.acctCanRecord;
+  if ("acctCanEditPosted" in body) data.acctCanEditPosted = !!body.acctCanEditPosted;
+  if ("acctCanManageChart" in body) data.acctCanManageChart = !!body.acctCanManageChart;
+  if ("acctCanManagePeriods" in body) data.acctCanManagePeriods = !!body.acctCanManagePeriods;
+  if ("acctViewOnly" in body) data.acctViewOnly = !!body.acctViewOnly;
 
   const updated = await prisma.position.update({ where: { id: params.id }, data });
   return NextResponse.json(updated);

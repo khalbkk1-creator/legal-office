@@ -29,11 +29,27 @@ export async function POST(req: NextRequest) {
   const isAccountant = !!body.isAccountant;
   const isFinancialManager = !!body.isFinancialManager;
   const departmentId = body.departmentId || undefined;
+  const acctCanRecord = !!body.acctCanRecord;
+  const acctCanEditPosted = !!body.acctCanEditPosted;
+  const acctCanManageChart = !!body.acctCanManageChart;
+  const acctCanManagePeriods = !!body.acctCanManagePeriods;
+  const acctViewOnly = !!body.acctViewOnly;
 
   if (!name) return NextResponse.json({ error: "اسم المسمى الوظيفي مطلوب" }, { status: 400 });
 
   const created = await prisma.position.create({
-    data: { name, allowedModules, isAccountant, isFinancialManager, departmentId },
+    data: {
+      name,
+      allowedModules,
+      isAccountant,
+      isFinancialManager,
+      departmentId,
+      acctCanRecord,
+      acctCanEditPosted,
+      acctCanManageChart,
+      acctCanManagePeriods,
+      acctViewOnly,
+    },
   });
 
   return NextResponse.json(created, { status: 201 });

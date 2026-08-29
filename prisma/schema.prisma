@@ -620,6 +620,14 @@ model Position {
   isFinancialManager Boolean  @default(false) // يعتمد كمرحلة "المدير المالي" بطلبات الصرف
   departmentId       String?
   department         Department? @relation(fields: [departmentId], references: [id])
+
+  // صلاحيات دقيقة داخل النظام المحاسبي تحديداً
+  acctCanRecord      Boolean @default(false) // تسجيل فواتير/مصاريف/قيود يدوية جديدة
+  acctCanEditPosted  Boolean @default(false) // تعديل/حذف/عكس قيود مرحّلة
+  acctCanManageChart Boolean @default(false) // إضافة/تعديل/حذف حسابات بدليل الحسابات
+  acctCanManagePeriods Boolean @default(false) // قفل/فك قفل الفترات، إعادة تعيين الدليل
+  acctViewOnly       Boolean @default(false) // عرض فقط، يعطّل كل الصلاحيات أعلاه بغض النظر عن قيمتها
+
   createdAt          DateTime @default(now())
 
   users User[]
