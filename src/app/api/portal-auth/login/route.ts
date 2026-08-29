@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { createPortalSessionCookieValue, portalCookieOptions } from "@/lib/portalAuth";
+import { createPortalSessionCookieValue, portalCookieOptions, ensureClientAccessToken } from "@/lib/portalAuth";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -22,9 +22,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "كلمة المرور غير صحيحة" }, { status: 400 });
   }
 
-  const token = await createPortalSessionCookieValue(client.id);
-  const res = NextResponse.json({ id: client.id, name: client.name });
+  const accessToken = await ensureClientAccessToken(client.id, client.accessToken);
+  const sessionToken = await createPortalSessionCookieValue(client.id);
+  const res = NextResponse.json({ id: client.id, name: client.name, token: accessToken });
   const { name: cookieName, ...options } = portalCookieOptions();
-  res.cookies.set(cookieName, token, options);
+  res.cookies.set(cookieName, sessionToken, options);
   return res;
 }

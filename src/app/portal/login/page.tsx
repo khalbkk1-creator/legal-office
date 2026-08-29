@@ -28,7 +28,8 @@ export default function PortalLoginPage() {
       setError(data.error || "تعذر تسجيل الدخول");
       return;
     }
-    router.push("/portal/account");
+    const data = await res.json();
+    router.push(`/portal/${data.token}`);
     router.refresh();
   }
 

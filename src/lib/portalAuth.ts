@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { encode, decode } from "next-auth/jwt";
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 const COOKIE_NAME = "portal-session";
@@ -41,4 +42,11 @@ export async function getPortalClient() {
   } catch {
     return null;
   }
+}
+
+export async function ensureClientAccessToken(clientId: string, existingToken: string | null) {
+  if (existingToken) return existingToken;
+  const newToken = randomUUID().replace(/-/g, "");
+  await prisma.client.update({ where: { id: clientId }, data: { accessToken: newToken } });
+  return newToken;
 }

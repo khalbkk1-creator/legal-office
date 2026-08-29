@@ -31,7 +31,8 @@ export default function PortalRegisterPage() {
       setError(data.error || "تعذر إنشاء الحساب");
       return;
     }
-    router.push("/portal/account");
+    const data = await res.json();
+    router.push(`/portal/${data.token}`);
     router.refresh();
   }
 
