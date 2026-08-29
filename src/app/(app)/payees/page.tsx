@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PayeesPage() {
   const payees = await prisma.payee.findMany({
-    include: { account: true },
+    include: { account: true, client: true },
     orderBy: { name: "asc" },
   });
 
@@ -17,13 +17,10 @@ export default async function PayeesPage() {
   });
   const balanceByAccount: Record<string, number> = {};
   for (const s of sums) {
-    // حساب المستفيد من نوع LIABILITY: الرصيد الطبيعي دائن، فلو صار مدين (دفعات بدون فواتير) يبين هنا كرقم سالب
     balanceByAccount[s.accountId] = (s._sum.credit ?? 0) - (s._sum.debit ?? 0);
   }
 
-  const [requestCounts] = await Promise.all([
-    prisma.paymentRequest.groupBy({ by: ["payeeId"], _count: true }),
-  ]);
+  const requestCounts = await prisma.paymentRequest.groupBy({ by: ["payeeId"], _count: true });
   const countByPayee: Record<string, number> = {};
   for (const c of requestCounts) countByPayee[c.payeeId] = c._count;
 
@@ -31,7 +28,7 @@ export default async function PayeesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">المستفيدون (الموردون/الجهات)</h1>
+          <h1 className="text-2xl font-bold text-ink">الموردون</h1>
           <p className="text-gray-500 text-sm mt-1">قاعدة بيانات كل الجهات والأشخاص المستفيدين من طلبات الصرف</p>
         </div>
         <Link
@@ -59,7 +56,12 @@ export default async function PayeesPage() {
               const balance = balanceByAccount[p.accountId] ?? 0;
               return (
                 <tr key={p.id} className="border-t border-gray-50">
-                  <td className="px-5 py-3 font-medium text-ink">{p.name}</td>
+                  <td className="px-5 py-3 font-medium text-ink">
+                    {p.name}
+                    {p.client && (
+                      <span className="mr-2 text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">🔗 عميل</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-gray-600">{p.type === "COMPANY" ? "جهة/شركة" : "فرد"}</td>
                   <td className="px-5 py-3 text-gray-600" dir="ltr">{p.phone || "—"}</td>
                   <td className="px-5 py-3 text-gray-600">{countByPayee[p.id] ?? 0}</td>
@@ -78,7 +80,7 @@ export default async function PayeesPage() {
             {payees.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
-                  لا يوجد مستفيدون مسجّلون بعد. يُضافون تلقائياً عند إنشاء أول طلب صرف لهم.
+                  لا يوجد موردون مسجّلون بعد. يُضافون تلقائياً عند إنشاء أول طلب صرف لهم.
                 </td>
               </tr>
             )}

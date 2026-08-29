@@ -101,7 +101,7 @@ export default function PaymentRequestsScreen({
             <p className="text-gray-500 text-sm mt-1">إنشاء ومتابعة طلبات الصرف واعتماداتها</p>
           </div>
           <Link href="/payees" className="text-sm text-primary-700 hover:underline">
-            📇 قاعدة بيانات المستفيدين
+            📇 قاعدة بيانات الموردين
           </Link>
         </div>
       </div>
@@ -150,6 +150,11 @@ function NewRequestForm({ payees, categories, cases }: { payees: Payee[]; catego
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ description: "", amount: "", vatAmount: "", payeeId: "", categoryId: "", caseId: "" });
   const [newPayee, setNewPayee] = useState({ show: false, name: "", type: "INDIVIDUAL", phone: "" });
+  const [beneficiaryMode, setBeneficiaryMode] = useState<"supplier" | "client">("supplier");
+  const [clientQuery, setClientQuery] = useState("");
+  const [clientResults, setClientResults] = useState<{ id: string; name: string; type: string; phone: string | null }[]>([]);
+  const [selectedClient, setSelectedClient] = useState<{ id: string; name: string } | null>(null);
+  const [searchingClients, setSearchingClients] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -158,12 +163,37 @@ function NewRequestForm({ payees, categories, cases }: { payees: Payee[]; catego
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  async function searchClients(q: string) {
+    setClientQuery(q);
+    setSelectedClient(null);
+    if (q.trim().length < 2) {
+      setClientResults([]);
+      return;
+    }
+    setSearchingClients(true);
+    const res = await fetch(`/api/clients/search?q=${encodeURIComponent(q)}`);
+    setSearchingClients(false);
+    if (res.ok) setClientResults(await res.json());
+  }
+
   async function createPayeeInline(): Promise<string | null> {
     if (!newPayee.name.trim()) return null;
     const res = await fetch("/api/payees", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newPayee.name, type: newPayee.type, phone: newPayee.phone }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.id as string;
+  }
+
+  async function linkClientAsPayee(): Promise<string | null> {
+    if (!selectedClient) return null;
+    const res = await fetch("/api/payees/from-client", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId: selectedClient.id }),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -180,11 +210,19 @@ function NewRequestForm({ payees, categories, cases }: { payees: Payee[]; catego
     setError("");
 
     let payeeId = form.payeeId;
-    if (newPayee.show) {
+    if (beneficiaryMode === "client") {
+      const linkedId = await linkClientAsPayee();
+      if (!linkedId) {
+        setSaving(false);
+        setError("حدد العميل المستفيد من الصرف");
+        return;
+      }
+      payeeId = linkedId;
+    } else if (newPayee.show) {
       const createdId = await createPayeeInline();
       if (!createdId) {
         setSaving(false);
-        setError("تعذر إنشاء المستفيد الجديد");
+        setError("تعذر إنشاء المورد الجديد");
         return;
       }
       payeeId = createdId;
@@ -213,6 +251,10 @@ function NewRequestForm({ payees, categories, cases }: { payees: Payee[]; catego
     }
     setForm({ description: "", amount: "", vatAmount: "", payeeId: "", categoryId: "", caseId: "" });
     setNewPayee({ show: false, name: "", type: "INDIVIDUAL", phone: "" });
+    setBeneficiaryMode("supplier");
+    setClientQuery("");
+    setClientResults([]);
+    setSelectedClient(null);
     setFile(null);
     setOpen(false);
     router.refresh();
@@ -275,15 +317,73 @@ function NewRequestForm({ payees, categories, cases }: { payees: Payee[]; catego
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">الجهة/الشخص المستفيد من الصرف *</label>
-        {!newPayee.show ? (
+        <label className="block text-sm font-medium text-gray-700 mb-1">الجهة المستفيدة من الصرف *</label>
+        <div className="flex gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setBeneficiaryMode("supplier")}
+            className={`text-xs rounded-lg px-3 py-1.5 border transition ${
+              beneficiaryMode === "supplier" ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-gray-300 text-gray-600"
+            }`}
+          >
+            مورد
+          </button>
+          <button
+            type="button"
+            onClick={() => setBeneficiaryMode("client")}
+            className={`text-xs rounded-lg px-3 py-1.5 border transition ${
+              beneficiaryMode === "client" ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-gray-300 text-gray-600"
+            }`}
+          >
+            عميل (من قاعدة العملاء)
+          </button>
+        </div>
+
+        {beneficiaryMode === "client" ? (
+          <div className="space-y-2">
+            {selectedClient ? (
+              <div className="flex items-center justify-between border border-primary-200 bg-primary-50 rounded-lg px-3 py-2">
+                <span className="text-sm text-primary-800">{selectedClient.name}</span>
+                <button type="button" onClick={() => { setSelectedClient(null); setClientQuery(""); }} className="text-xs text-primary-600 hover:underline">تغيير</button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  value={clientQuery}
+                  onChange={(e) => searchClients(e.target.value)}
+                  placeholder="اكتب اسم العميل أو جواله للبحث..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                {clientQuery.trim().length >= 2 && (
+                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+                    {searchingClients && <p className="px-3 py-2 text-xs text-gray-400">جاري البحث...</p>}
+                    {!searchingClients && clientResults.map((c) => (
+                      <button
+                        type="button"
+                        key={c.id}
+                        onClick={() => { setSelectedClient(c); setClientResults([]); }}
+                        className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between gap-2"
+                      >
+                        <span className="text-gray-700">{c.name}</span>
+                        {c.phone && <span className="text-gray-400 text-xs" dir="ltr">{c.phone}</span>}
+                      </button>
+                    ))}
+                    {!searchingClients && clientResults.length === 0 && (
+                      <p className="px-3 py-2 text-xs text-gray-400">لا يوجد عملاء مطابقين</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : !newPayee.show ? (
           <div className="flex items-center gap-2">
             <select
               value={form.payeeId}
               onChange={(e) => update("payeeId", e.target.value)}
               className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="">اختر مستفيد</option>
+              <option value="">اختر مورد</option>
               {payees.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -293,13 +393,13 @@ function NewRequestForm({ payees, categories, cases }: { payees: Payee[]; catego
               onClick={() => setNewPayee((n) => ({ ...n, show: true }))}
               className="text-xs text-primary-700 hover:underline whitespace-nowrap"
             >
-              + مستفيد جديد
+              + مورد جديد
             </button>
           </div>
         ) : (
           <div className="border border-gray-200 rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">إضافة مستفيد جديد</span>
+              <span className="text-xs text-gray-500">إضافة مورد جديد</span>
               <button type="button" onClick={() => setNewPayee({ show: false, name: "", type: "INDIVIDUAL", phone: "" })} className="text-xs text-gray-400 hover:underline">إلغاء</button>
             </div>
             <input
@@ -468,7 +568,7 @@ function RequestCard({ r, canAct, accounts, currentUserId }: { r: PaymentRequest
   }
 
   async function closeRequest() {
-    if (!confirm("متأكد تبي تقفل الفاتورة؟ راح يترحّل قيد المصروف الفعلي ويُقفل حساب المستفيد.")) return;
+    if (!confirm("متأكد تبي تقفل الفاتورة؟ راح يترحّل قيد المصروف الفعلي ويُقفل حساب المورد.")) return;
     setBusy(true);
     setError("");
     const res = await fetch(`/api/payment-requests/${r.id}/close`, { method: "POST" });

@@ -410,6 +410,8 @@ model Payee {
   notes     String?
   accountId String   @unique // حساب ذمم دائنة مستقل لهذا الشخص/الجهة
   account   Account  @relation(fields: [accountId], references: [id])
+  clientId  String?  @unique // لو المستفيد هو عميل موجود بقاعدة العملاء (مبلغ نرجعه له)
+  client    Client?  @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
 
   paymentRequests PaymentRequest[]
@@ -673,6 +675,7 @@ model Client {
   quotations Quotation[]
   serviceRequests ServiceRequest[]
   consultationRequests ConsultationRequest[]
+  payeeLink Payee?
 
   @@index([phone])
   @@index([email])

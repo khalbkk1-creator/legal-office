@@ -12,7 +12,7 @@ const SYSTEM_MODULES = [
   { key: "accounting", label: "النظام المحاسبي", icon: "📒" },
   { key: "quotes", label: "عروض الأسعار", icon: "📝" },
   { key: "payment-requests", label: "طلبات الصرف", icon: "💸" },
-  { key: "payees", label: "المستفيدون", icon: "📇" },
+  { key: "payees", label: "الموردون", icon: "📇" },
   { key: "finance", label: "اللوحة المالية", icon: "📊" },
   { key: "analytics", label: "الإحصائيات", icon: "📈" },
   { key: "users", label: "المستخدمون", icon: "🔑" },

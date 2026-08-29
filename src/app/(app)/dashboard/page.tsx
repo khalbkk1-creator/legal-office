@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     { href: "/service-requests", label: "طلبات الخدمة", icon: "📋", badge: newRequests || undefined, moduleKey: "service-requests" },
     { href: "/accounting", label: "النظام المحاسبي", icon: "📒", badge: unpaidInvoices || undefined, moduleKey: "accounting" },
     { href: "/payment-requests", label: "طلبات الصرف", icon: "💸", badge: myPendingPaymentRequests || undefined, moduleKey: "payment-requests" },
-    { href: "/payees", label: "المستفيدون", icon: "📇", moduleKey: "payees" },
+    { href: "/payees", label: "الموردون", icon: "📇", moduleKey: "payees" },
     { href: "/quotes", label: "عروض الأسعار", icon: "📝", moduleKey: "quotes" },
     { href: "/finance", label: "اللوحة المالية", icon: "📊", moduleKey: "finance" },
     { href: "/analytics", label: "الإحصائيات", icon: "📈", moduleKey: "analytics" },
