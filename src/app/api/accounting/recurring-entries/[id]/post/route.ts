@@ -4,10 +4,17 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { postJournalEntry, assertDateNotLocked } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+  }
 
   const template = await prisma.recurringEntry.findUnique({
     where: { id: params.id },
@@ -23,8 +30,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });
   }
-
-  const user = session.user as any;
 
   const created = await postJournalEntry({
     description: template.description,

@@ -3,17 +3,23 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+  }
 
   const body = await req.json();
   const data: Record<string, unknown> = {};
   if ("isActive" in body) data.isActive = !!body.isActive;
   if ("description" in body) data.description = (body.description || "").trim();
   if ("dayOfMonth" in body) data.dayOfMonth = Number(body.dayOfMonth) || 1;
-
   if (Array.isArray(body.lines)) {
     const lines = body.lines as { accountId: string; debit?: number; credit?: number }[];
     const totalDebit = lines.reduce((s, l) => s + (l.debit ?? 0), 0);
@@ -32,7 +38,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   });
 
   if ("description" in body || Array.isArray(body.lines)) {
-    const user = session.user as any;
     await logAudit({
       userId: user.id,
       userName: user.name,
@@ -50,12 +55,17 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+  }
+
   const entry = await prisma.recurringEntry.findUnique({ where: { id: params.id } });
   if (!entry) return NextResponse.json({ error: "غير موجود" }, { status: 404 });
 
   await prisma.recurringEntry.delete({ where: { id: params.id } });
 
-  const user = session.user as any;
   await logAudit({
     userId: user.id,
     userName: user.name,

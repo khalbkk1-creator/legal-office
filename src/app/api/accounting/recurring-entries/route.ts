@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -19,6 +20,12 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+  }
+
   const body = await req.json();
   const description = (body.description || "").trim();
   const dayOfMonth = Number(body.dayOfMonth) || 1;
@@ -33,8 +40,6 @@ export async function POST(req: NextRequest) {
   if (Math.round(totalDebit * 100) !== Math.round(totalCredit * 100)) {
     return NextResponse.json({ error: "القيد غير متوازن" }, { status: 400 });
   }
-
-  const user = session.user as any;
 
   const created = await prisma.recurringEntry.create({
     data: {
