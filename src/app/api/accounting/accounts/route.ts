@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureChartOfAccounts } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -18,6 +19,12 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "manageChart");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("manageChart") }, { status: 403 });
+  }
+
   const body = await req.json();
   const code = (body.code || "").trim();
   const name = (body.name || "").trim();
@@ -30,7 +37,6 @@ export async function POST(req: NextRequest) {
     data: { code, name, type, parentId: body.parentId || undefined },
   });
 
-  const user = session.user as any;
   await logAudit({
     userId: user.id,
     userName: user.name,

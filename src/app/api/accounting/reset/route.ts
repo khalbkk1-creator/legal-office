@@ -4,14 +4,16 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { upgradeChartHierarchy } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
-  const role = (session.user as any).role;
-  if (role !== "PARTNER") {
-    return NextResponse.json({ error: "إعادة التعيين متاحة للشريك فقط" }, { status: 403 });
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "managePeriods");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("managePeriods") }, { status: 403 });
   }
 
   // حذف كل القيود اليومية (يحذف سطورها تلقائياً بالتتابع)، ثم كل الحسابات
@@ -21,7 +23,6 @@ export async function POST() {
   // إعادة بناء الدليل النظيف الكامل بـ3 مستويات
   await upgradeChartHierarchy();
 
-  const user = session.user as any;
   await logAudit({
     userId: user.id,
     userName: user.name,

@@ -3,17 +3,23 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "manageChart");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("manageChart") }, { status: 403 });
+  }
 
   const account = await prisma.account.findUnique({ where: { id: params.id } });
   if (!account) return NextResponse.json({ error: "الحساب غير موجود" }, { status: 404 });
 
   const body = await req.json();
   const data: Record<string, unknown> = {};
-
   if ("name" in body) data.name = body.name;
   if ("isActive" in body) data.isActive = !!body.isActive;
   if (!account.isSystem) {
@@ -24,7 +30,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const updated = await prisma.account.update({ where: { id: params.id }, data });
 
-  const user = session.user as any;
   await logAudit({
     userId: user.id,
     userName: user.name,
@@ -40,6 +45,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "manageChart");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("manageChart") }, { status: 403 });
+  }
 
   const account = await prisma.account.findUnique({ where: { id: params.id } });
   if (!account) return NextResponse.json({ error: "الحساب غير موجود" }, { status: 404 });
@@ -59,7 +70,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   await prisma.account.delete({ where: { id: params.id } });
 
-  const user = session.user as any;
   await logAudit({
     userId: user.id,
     userName: user.name,
