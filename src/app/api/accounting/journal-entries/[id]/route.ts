@@ -4,10 +4,17 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { assertDateNotLocked } from "@/lib/accounting";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+  }
 
   const entry = await prisma.journalEntry.findUnique({ where: { id: params.id } });
   if (!entry) return NextResponse.json({ error: "القيد غير موجود" }, { status: 404 });
@@ -49,7 +56,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     include: { lines: { include: { account: true } } },
   });
 
-  const user = session.user as any;
   await logAudit({
     userId: user.id,
     userName: user.name,
@@ -65,6 +71,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "editPosted");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("editPosted") }, { status: 403 });
+  }
 
   const entry = await prisma.journalEntry.findUnique({
     where: { id: params.id },
@@ -88,7 +100,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   await prisma.journalEntry.delete({ where: { id: params.id } });
 
-  const user = session.user as any;
   await logAudit({
     userId: user.id,
     userName: user.name,

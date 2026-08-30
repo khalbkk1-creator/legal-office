@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { postJournalEntry, assertDateNotLocked } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -20,6 +21,12 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+  }
+
   const body = await req.json();
   const description = (body.description || "").trim();
   const lines = body.lines as { accountId: string; debit?: number; credit?: number; description?: string }[];
@@ -27,8 +34,6 @@ export async function POST(req: NextRequest) {
   if (!description || !Array.isArray(lines) || lines.length < 2) {
     return NextResponse.json({ error: "الوصف وسطرين على الأقل مطلوبة" }, { status: 400 });
   }
-
-  const user = session.user as any;
 
   try {
     const entryDate = body.date ? new Date(body.date) : new Date();

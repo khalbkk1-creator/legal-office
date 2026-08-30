@@ -3,15 +3,21 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabaseAdmin";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+  }
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "لم يتم إرفاق ملف" }, { status: 400 });
-
   if (file.size > 10 * 1024 * 1024) {
     return NextResponse.json({ error: "حجم الملف كبير جداً (الحد الأقصى 10 ميجابايت)" }, { status: 400 });
   }

@@ -4,10 +4,17 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { postJournalEntry } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "editPosted");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("editPosted") }, { status: 403 });
+  }
 
   const original = await prisma.journalEntry.findUnique({
     where: { id: params.id },
@@ -20,8 +27,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   if (original.reversalOfId) {
     return NextResponse.json({ error: "لا يمكن عكس قيد عكسي" }, { status: 400 });
   }
-
-  const user = session.user as any;
 
   const reversal = await postJournalEntry({
     description: `عكس قيد رقم ${original.entryNumber} — ${original.description}`,
