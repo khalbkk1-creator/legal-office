@@ -114,10 +114,18 @@ export default function AccountingScreen({
     lastPostedMonth: number | null;
     lines: { id: string; debit: number; credit: number; account: Account }[];
   }[];
-  initialTab?: "invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements" | "vat" | "audit" | "aging" | "opening" | "lock" | "recurring" | "reconciliation";
+  initialTab?: "invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements" | "vat" | "audit" | "aging" | "opening" | "lock" | "recurring" | "reconciliation" | "settings";
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements" | "vat" | "audit" | "aging" | "opening" | "lock" | "recurring" | "reconciliation">(initialTab ?? "journal");
+  const [tab, setTab] = useState<"invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements" | "vat" | "audit" | "aging" | "opening" | "lock" | "recurring" | "reconciliation" | "settings">(initialTab ?? "journal");
+  const [canManageSettings, setCanManageSettings] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/me/accounting-access")
+      .then((r) => r.json())
+      .then((data) => setCanManageSettings(!!data.isPartner || !!data.isFinancialManager))
+      .catch(() => {});
+  }, []);
 
   const totalDebit = trialBalance.reduce((s, r) => s + r.debit, 0);
   const totalCredit = trialBalance.reduce((s, r) => s + r.credit, 0);
@@ -246,6 +254,16 @@ export default function AccountingScreen({
         >
           🏦 مطابقة البنك
         </button>
+        {canManageSettings && (
+          <button
+            onClick={() => setTab("settings")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+              tab === "settings" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            🧮 إعدادات المحاسبة
+          </button>
+        )}
       </div>
 
       {tab === "invoices" && (
@@ -510,6 +528,8 @@ export default function AccountingScreen({
       {tab === "recurring" && <RecurringEntriesTab accounts={accounts} templates={recurringEntries} />}
 
       {tab === "reconciliation" && <ReconciliationTab accounts={accounts} />}
+
+      {tab === "settings" && <AccountingSettingsTab />}
     </div>
   );
 }
@@ -2784,5 +2804,106 @@ function AttachmentUpload({
       {uploading ? "جاري الرفع..." : "📎 إرفاق مستند"}
       <input type="file" onChange={handleUpload} disabled={uploading} className="hidden" />
     </label>
+  );
+}
+
+type SettingsPosition = {
+  id: string;
+  name: string;
+  acctCanRecord: boolean;
+  acctCanEditPosted: boolean;
+  acctCanManageChart: boolean;
+  acctCanManagePeriods: boolean;
+  acctViewOnly: boolean;
+};
+
+const ACCT_PERMISSION_FIELDS: { key: keyof SettingsPosition; label: string }[] = [
+  { key: "acctCanRecord", label: "تسجيل فواتير/مصاريف/قيود جديدة" },
+  { key: "acctCanEditPosted", label: "تعديل أو حذف أو عكس قيود مرحّلة" },
+  { key: "acctCanManageChart", label: "إدارة دليل الحسابات" },
+  { key: "acctCanManagePeriods", label: "إدارة الفترات وإعادة تعيين الدليل" },
+  { key: "acctViewOnly", label: "عرض فقط (يلغي كل الصلاحيات أعلاه)" },
+];
+
+function AccountingSettingsTab() {
+  const [positions, setPositions] = useState<SettingsPosition[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/positions")
+      .then((r) => r.json())
+      .then((data) => {
+        setPositions(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  async function toggle(positionId: string, field: keyof SettingsPosition) {
+    const position = positions.find((p) => p.id === positionId);
+    if (!position) return;
+
+    const newValue = !position[field];
+    setPositions((prev) => prev.map((p) => (p.id === positionId ? { ...p, [field]: newValue } : p)));
+    setSavingId(positionId);
+    setError("");
+
+    const res = await fetch(`/api/positions/${positionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: newValue }),
+    });
+
+    setSavingId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "تعذر حفظ التعديل");
+      setPositions((prev) => prev.map((p) => (p.id === positionId ? { ...p, [field]: !newValue } : p)));
+    }
+  }
+
+  if (loading) {
+    return <p className="text-sm text-gray-400 text-center py-8">جاري التحميل...</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-800">
+        💡 هذي الصلاحيات تخص النظام المحاسبي فقط، ولا تؤثر على أي شاشة أو إعداد ثاني بالنظام. الشريك يتجاوزها دائماً.
+      </div>
+
+      {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+
+      {positions.length === 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-gray-400">
+          لا توجد مسميات وظيفية بعد. أنشئها من صفحة "المسميات والصلاحيات" أولاً.
+        </div>
+      )}
+
+      {positions.map((p) => (
+        <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="font-bold text-ink mb-3">
+            {p.name}
+            {savingId === p.id && <span className="text-xs text-gray-400 mr-2">جاري الحفظ...</span>}
+          </h2>
+          <div className="space-y-2">
+            {ACCT_PERMISSION_FIELDS.map((f) => (
+              <label key={f.key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={p[f.key] as boolean}
+                  onChange={() => toggle(p.id, f.key)}
+                  disabled={savingId === p.id}
+                  className="accent-primary-700"
+                />
+                {f.label}
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
