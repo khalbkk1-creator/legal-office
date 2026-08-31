@@ -10,9 +10,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "manageChart");
+  const allowed = await hasAccountingPermission(user.id, user.role, "chartEdit");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("manageChart") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("chartEdit") }, { status: 403 });
   }
 
   const account = await prisma.account.findUnique({ where: { id: params.id } });
@@ -47,9 +47,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "manageChart");
+  const allowed = await hasAccountingPermission(user.id, user.role, "chartDelete");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("manageChart") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("chartDelete") }, { status: 403 });
   }
 
   const account = await prisma.account.findUnique({ where: { id: params.id } });

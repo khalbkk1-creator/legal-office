@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -22,6 +23,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "reconciliationSave");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("reconciliationSave") }, { status: 403 });
+  }
 
   const body = await req.json();
   const accountId = body.accountId as string;
@@ -44,10 +51,8 @@ export async function POST(req: NextRequest) {
   const credit = sums._sum.credit ?? 0;
   const isDebitNormal = account.type === "ASSET" || account.type === "EXPENSE";
   const bookBalance = isDebitNormal ? debit - credit : credit - debit;
-
   const difference = bankBalance - bookBalance;
 
-  const user = session.user as any;
   const created = await prisma.reconciliationRecord.create({
     data: {
       accountId,

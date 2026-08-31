@@ -11,9 +11,9 @@ export async function POST() {
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "managePeriods");
+  const allowed = await hasAccountingPermission(user.id, user.role, "chartReset");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("managePeriods") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("chartReset") }, { status: 403 });
   }
 
   // حذف كل القيود اليومية (يحذف سطورها تلقائياً بالتتابع)، ثم كل الحسابات

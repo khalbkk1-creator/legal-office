@@ -621,12 +621,24 @@ model Position {
   departmentId       String?
   department         Department? @relation(fields: [departmentId], references: [id])
 
-  // صلاحيات دقيقة داخل النظام المحاسبي تحديداً
-  acctCanRecord      Boolean @default(false) // تسجيل فواتير/مصاريف/قيود يدوية جديدة
-  acctCanEditPosted  Boolean @default(false) // تعديل/حذف/عكس قيود مرحّلة
-  acctCanManageChart Boolean @default(false) // إضافة/تعديل/حذف حسابات بدليل الحسابات
-  acctCanManagePeriods Boolean @default(false) // قفل/فك قفل الفترات، إعادة تعيين الدليل
-  acctViewOnly       Boolean @default(false) // عرض فقط، يعطّل كل الصلاحيات أعلاه بغض النظر عن قيمتها
+  // صلاحيات دقيقة داخل النظام المحاسبي — كل إجراء له صلاحية مستقلة
+  acctJournalCreate     Boolean @default(false) // إنشاء قيد يدوي جديد (مسودة أو مباشر)
+  acctJournalConfirm    Boolean @default(false) // اعتماد قيد مسودة
+  acctJournalEdit       Boolean @default(false) // تعديل قيد مسودة
+  acctJournalDelete     Boolean @default(false) // حذف قيد نهائياً
+  acctJournalReverse    Boolean @default(false) // عكس قيد
+  acctJournalAttach     Boolean @default(false) // رفع مرفق لقيد
+  acctChartCreate       Boolean @default(false) // إضافة حساب جديد بالدليل
+  acctChartEdit         Boolean @default(false) // تعديل/تفعيل/تعطيل حساب
+  acctChartDelete       Boolean @default(false) // حذف حساب من الدليل
+  acctChartReset        Boolean @default(false) // إعادة تعيين الدليل بالكامل
+  acctPeriodLock        Boolean @default(false) // قفل/فك قفل الفترات المحاسبية
+  acctOpeningBalances   Boolean @default(false) // تسجيل/تعديل الأرصدة الافتتاحية
+  acctRecurringManage   Boolean @default(false) // إنشاء/تعديل/حذف قيد متكرر
+  acctRecurringPost     Boolean @default(false) // ترحيل قيد متكرر يدوياً
+  acctReconciliationManage Boolean @default(false) // إضافة/حذف حركات كشف، مطابقة يدوية وتلقائية
+  acctReconciliationSave   Boolean @default(false) // حفظ ملخص المطابقة كسجل رسمي
+  acctViewOnly          Boolean @default(false) // عرض فقط، يعطّل كل الصلاحيات أعلاه بغض النظر عن قيمتها
 
   createdAt          DateTime @default(now())
 

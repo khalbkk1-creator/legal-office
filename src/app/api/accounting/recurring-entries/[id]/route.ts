@@ -10,9 +10,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  const allowed = await hasAccountingPermission(user.id, user.role, "recurringManage");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("recurringManage") }, { status: 403 });
   }
 
   const body = await req.json();
@@ -56,9 +56,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  const allowed = await hasAccountingPermission(user.id, user.role, "recurringManage");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("recurringManage") }, { status: 403 });
   }
 
   const entry = await prisma.recurringEntry.findUnique({ where: { id: params.id } });

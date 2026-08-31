@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { upgradeChartHierarchy, postJournalEntry, getSystemAccountId } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
+import { hasAccountingPermission, accountingPermissionError } from "@/lib/accountingPermissions";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -19,6 +20,12 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+
+  const user = session.user as any;
+  const allowed = await hasAccountingPermission(user.id, user.role, "openingBalances");
+  if (!allowed) {
+    return NextResponse.json({ error: accountingPermissionError("openingBalances") }, { status: 403 });
+  }
 
   await upgradeChartHierarchy();
 
@@ -69,7 +76,6 @@ export async function POST(req: NextRequest) {
   // حذف أي قيد أرصدة افتتاحية سابق لتفادي التكرار
   await prisma.journalEntry.deleteMany({ where: { sourceType: "OPENING_BALANCE" } });
 
-  const user = session.user as any;
   const created = await postJournalEntry({
     description: "الأرصدة الافتتاحية",
     sourceType: "OPENING_BALANCE",

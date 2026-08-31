@@ -20,9 +20,9 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "manageChart");
+  const allowed = await hasAccountingPermission(user.id, user.role, "chartCreate");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("manageChart") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("chartCreate") }, { status: 403 });
   }
 
   const body = await req.json();

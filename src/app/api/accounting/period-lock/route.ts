@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "managePeriods");
+  const allowed = await hasAccountingPermission(user.id, user.role, "periodLock");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("managePeriods") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("periodLock") }, { status: 403 });
   }
 
   const body = await req.json();

@@ -11,9 +11,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "record");
+  const allowed = await hasAccountingPermission(user.id, user.role, "journalEdit");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("record") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("journalEdit") }, { status: 403 });
   }
 
   const entry = await prisma.journalEntry.findUnique({ where: { id: params.id } });
@@ -73,9 +73,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
   const user = session.user as any;
-  const allowed = await hasAccountingPermission(user.id, user.role, "editPosted");
+  const allowed = await hasAccountingPermission(user.id, user.role, "journalDelete");
   if (!allowed) {
-    return NextResponse.json({ error: accountingPermissionError("editPosted") }, { status: 403 });
+    return NextResponse.json({ error: accountingPermissionError("journalDelete") }, { status: 403 });
   }
 
   const entry = await prisma.journalEntry.findUnique({

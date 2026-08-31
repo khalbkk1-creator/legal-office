@@ -2810,19 +2810,68 @@ function AttachmentUpload({
 type SettingsPosition = {
   id: string;
   name: string;
-  acctCanRecord: boolean;
-  acctCanEditPosted: boolean;
-  acctCanManageChart: boolean;
-  acctCanManagePeriods: boolean;
+  department: { id: string; name: string } | null;
+  acctJournalCreate: boolean;
+  acctJournalConfirm: boolean;
+  acctJournalEdit: boolean;
+  acctJournalDelete: boolean;
+  acctJournalReverse: boolean;
+  acctJournalAttach: boolean;
+  acctChartCreate: boolean;
+  acctChartEdit: boolean;
+  acctChartDelete: boolean;
+  acctChartReset: boolean;
+  acctPeriodLock: boolean;
+  acctOpeningBalances: boolean;
+  acctRecurringManage: boolean;
+  acctRecurringPost: boolean;
+  acctReconciliationManage: boolean;
+  acctReconciliationSave: boolean;
   acctViewOnly: boolean;
 };
 
-const ACCT_PERMISSION_FIELDS: { key: keyof SettingsPosition; label: string }[] = [
-  { key: "acctCanRecord", label: "تسجيل فواتير/مصاريف/قيود جديدة" },
-  { key: "acctCanEditPosted", label: "تعديل أو حذف أو عكس قيود مرحّلة" },
-  { key: "acctCanManageChart", label: "إدارة دليل الحسابات" },
-  { key: "acctCanManagePeriods", label: "إدارة الفترات وإعادة تعيين الدليل" },
-  { key: "acctViewOnly", label: "عرض فقط (يلغي كل الصلاحيات أعلاه)" },
+const ACCT_PERMISSION_SECTIONS: { title: string; fields: { key: keyof SettingsPosition; label: string }[] }[] = [
+  {
+    title: "📒 القيود اليومية",
+    fields: [
+      { key: "acctJournalCreate", label: "إنشاء قيد يدوي جديد" },
+      { key: "acctJournalConfirm", label: "اعتماد قيد مسودة" },
+      { key: "acctJournalEdit", label: "تعديل قيد مسودة" },
+      { key: "acctJournalReverse", label: "عكس قيد" },
+      { key: "acctJournalDelete", label: "حذف قيد نهائياً" },
+      { key: "acctJournalAttach", label: "رفع مرفق لقيد" },
+    ],
+  },
+  {
+    title: "📚 دليل الحسابات",
+    fields: [
+      { key: "acctChartCreate", label: "إضافة حساب جديد" },
+      { key: "acctChartEdit", label: "تعديل / تفعيل / تعطيل حساب" },
+      { key: "acctChartDelete", label: "حذف حساب" },
+      { key: "acctChartReset", label: "إعادة تعيين الدليل بالكامل" },
+    ],
+  },
+  {
+    title: "🏁 الفترات والأرصدة",
+    fields: [
+      { key: "acctPeriodLock", label: "قفل / فك قفل الفترات المحاسبية" },
+      { key: "acctOpeningBalances", label: "الأرصدة الافتتاحية" },
+    ],
+  },
+  {
+    title: "🔁 القيود المتكررة",
+    fields: [
+      { key: "acctRecurringManage", label: "إنشاء / تعديل / حذف قيد متكرر" },
+      { key: "acctRecurringPost", label: "ترحيل قيد متكرر يدوياً" },
+    ],
+  },
+  {
+    title: "🏦 المطابقة البنكية",
+    fields: [
+      { key: "acctReconciliationManage", label: "إضافة/حذف حركات كشف، ومطابقة يدوية وتلقائية" },
+      { key: "acctReconciliationSave", label: "حفظ ملخص المطابقة كسجل رسمي" },
+    ],
+  },
 ];
 
 function AccountingSettingsTab() {
@@ -2868,42 +2917,68 @@ function AccountingSettingsTab() {
     return <p className="text-sm text-gray-400 text-center py-8">جاري التحميل...</p>;
   }
 
+  // نعرض بس المسميات المرتبطة بإدارة اسمها فيه "مالي" (الإدارة المالية، الشؤون المالية...إلخ)
+  const financePositions = positions.filter((p) => p.department?.name?.includes("مالي"));
+
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-800">
-        💡 هذي الصلاحيات تخص النظام المحاسبي فقط، ولا تؤثر على أي شاشة أو إعداد ثاني بالنظام. الشريك يتجاوزها دائماً.
+        💡 هذي الصلاحيات تخص النظام المحاسبي فقط، ولا تؤثر على أي شاشة أو إعداد ثاني بالنظام. الشريك يتجاوزها دائماً. تظهر هنا بس المسميات الوظيفية المرتبطة بالإدارة المالية.
       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-      {positions.length === 0 && (
+      {financePositions.length === 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-gray-400">
-          لا توجد مسميات وظيفية بعد. أنشئها من صفحة "المسميات والصلاحيات" أولاً.
+          لا توجد مسميات وظيفية مرتبطة بالإدارة المالية بعد. اربط المسمى بإدارة اسمها يحتوي "مالي" من صفحة "المسميات والصلاحيات" أولاً.
         </div>
       )}
 
-      {positions.map((p) => (
+      {financePositions.map((p) => (
         <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="font-bold text-ink mb-3">
+          <h2 className="font-bold text-ink mb-1">
             {p.name}
             {savingId === p.id && <span className="text-xs text-gray-400 mr-2">جاري الحفظ...</span>}
           </h2>
-          <div className="space-y-2">
-            {ACCT_PERMISSION_FIELDS.map((f) => (
-              <label key={f.key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <p className="text-xs text-gray-400 mb-4">{p.department?.name}</p>
+
+          <div className="space-y-4">
+            {ACCT_PERMISSION_SECTIONS.map((section) => (
+              <div key={section.title}>
+                <p className="text-xs font-medium text-gray-500 mb-2">{section.title}</p>
+                <div className="space-y-1.5 pr-1">
+                  {section.fields.map((f) => (
+                    <label key={f.key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={p[f.key] as boolean}
+                        onChange={() => toggle(p.id, f.key)}
+                        disabled={savingId === p.id}
+                        className="accent-primary-700"
+                      />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div className="border-t border-gray-100 pt-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={p[f.key] as boolean}
-                  onChange={() => toggle(p.id, f.key)}
+                  checked={p.acctViewOnly}
+                  onChange={() => toggle(p.id, "acctViewOnly")}
                   disabled={savingId === p.id}
                   className="accent-primary-700"
                 />
-                {f.label}
+                <span className="font-medium">عرض فقط (يلغي كل الصلاحيات أعلاه بغض النظر عن تفعيلها)</span>
               </label>
-            ))}
+            </div>
           </div>
         </div>
       ))}
     </div>
   );
 }
+
