@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import PrintButton from "../../PrintButton";
+import { generateZatcaQrDataUrl } from "@/lib/zatca";
 
 export default async function PrintSalePage({ params }: { params: { id: string } }) {
   const [sale, settings] = await Promise.all([
@@ -12,6 +13,17 @@ export default async function PrintSalePage({ params }: { params: { id: string }
   ]);
 
   if (!sale) notFound();
+
+  const qrDataUrl =
+    settings?.taxNumber && settings?.officeName
+      ? await generateZatcaQrDataUrl({
+          sellerName: settings.officeName,
+          vatNumber: settings.taxNumber,
+          invoiceTimestamp: sale.saleDate,
+          invoiceTotal: sale.totalAmount,
+          vatTotal: sale.applyVat ? sale.vatAmount : 0,
+        })
+      : null;
 
   return (
     <div className="min-h-screen bg-gray-50 print:bg-white py-10 px-4" dir="rtl">
@@ -96,7 +108,17 @@ export default async function PrintSalePage({ params }: { params: { id: string }
               {sale.paymentStatus === "PAID" ? "مدفوعة" : sale.paymentStatus === "PARTIAL" ? "مدفوعة جزئياً" : "غير مدفوعة"}
             </span>
           </p>
+          {qrDataUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qrDataUrl} alt="ZATCA QR" className="w-24 h-24" />
+          )}
         </div>
+
+        {!qrDataUrl && (
+          <p className="text-[11px] text-amber-600 mt-4 text-center">
+            💡 لإظهار رمز الفوترة الإلكترونية، أضف "الرقم الضريبي" و"اسم المكتب" من صفحة الإعدادات.
+          </p>
+        )}
       </div>
     </div>
   );
