@@ -19,11 +19,12 @@
     "@supabase/supabase-js": "^2.45.4",
     "bcryptjs": "^2.4.3",
     "docx": "^9.0.2",
-    "xlsx": "^0.18.5",
     "next": "14.2.35",
     "next-auth": "^4.24.7",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
