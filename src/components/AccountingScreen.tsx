@@ -149,7 +149,7 @@ export default function AccountingScreen({
         )}
       </div>
 
-      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit overflow-x-auto max-w-full">
+      <div className="flex flex-wrap items-center gap-1 bg-gray-100 rounded-xl p-1">
         <button
           onClick={() => setTab("invoices")}
           className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
