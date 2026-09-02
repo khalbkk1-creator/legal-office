@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     prisma.consultationRequest.count({ where: { status: "PENDING" } }),
     prisma.sale.count({ where: { paymentStatus: { not: "PAID" } } }),
     prisma.paymentRequest.findMany({
-      where: { status: { in: ["PENDING_MANAGER", "PENDING_ACCOUNTANT", "PENDING_FINANCE", "APPROVED", "PAID"] } },
+      where: { status: { in: ["PENDING_MANAGER", "PENDING_ACCOUNTANT", "PENDING_FINANCE", "APPROVED", "PAID", "RETURNED"] } },
       select: { status: true, invoiceUrl: true, requestedById: true, requestedBy: { select: { managerId: true } } },
     }),
     user?.id ? prisma.user.findUnique({ where: { id: user.id }, include: { position: true } }) : null,
@@ -66,6 +66,7 @@ export default async function DashboardPage() {
     if (r.status === "PENDING_ACCOUNTANT") return isAccountant || isPartner;
     if (r.status === "PENDING_FINANCE") return isFinancialManager || isPartner;
     if (r.status === "APPROVED") return r.requestedById === user?.id || isPartner;
+    if (r.status === "RETURNED") return r.requestedById === user?.id;
     if (r.status === "PAID" && r.invoiceUrl) return isAccountant || isPartner;
     return false;
   }).length;

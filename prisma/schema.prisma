@@ -469,6 +469,11 @@ model PaymentRequest {
   rejectedAt      DateTime?
   rejectionReason String?
 
+  returnedById String?
+  returnedBy   User?     @relation("ReturnedPayments", fields: [returnedById], references: [id])
+  returnedAt   DateTime?
+  returnReason String?
+
   paymentAccountId  String?
   paidAt            DateTime?
   transferProofUrl  String?
@@ -697,6 +702,7 @@ model User {
   accountantApprovedPayments PaymentRequest[] @relation("AccountantApprovedPayments")
   financeApprovedPayments PaymentRequest[] @relation("FinanceApprovedPayments")
   rejectedPayments        PaymentRequest[] @relation("RejectedPayments")
+  returnedPayments        PaymentRequest[] @relation("ReturnedPayments")
   closedPayments          PaymentRequest[] @relation("ClosedPayments")
   assignedConsultations   ConsultationRequest[] @relation("AssignedConsultations")
   approvedConsultations   ConsultationRequest[] @relation("ApprovedConsultations")

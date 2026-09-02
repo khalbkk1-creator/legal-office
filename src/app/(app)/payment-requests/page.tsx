@@ -20,6 +20,7 @@ export default async function PaymentRequestsPage() {
         accountantApprovedBy: true,
         financeApprovedBy: true,
         rejectedBy: true,
+        returnedBy: true,
         closedBy: true,
         activities: { orderBy: { createdAt: "asc" } },
       },
@@ -32,13 +33,37 @@ export default async function PaymentRequestsPage() {
     user?.id ? prisma.user.findUnique({ where: { id: user.id }, include: { position: true } }) : null,
   ]);
 
+  const entryIds = requests.flatMap((r) => [r.paymentJournalEntryId, r.closingJournalEntryId]).filter(Boolean) as string[];
+  const adjustmentEntries = await prisma.journalEntry.findMany({
+    where: { sourceType: "MANUAL", sourceId: { in: requests.map((r) => r.id) } },
+    select: { id: true, entryNumber: true, date: true, sourceId: true, description: true },
+  });
+  const linkedEntries = entryIds.length
+    ? await prisma.journalEntry.findMany({ where: { id: { in: entryIds } }, select: { id: true, entryNumber: true, date: true } })
+    : [];
+  const entryById = Object.fromEntries(linkedEntries.map((e) => [e.id, e]));
+  const requestsWithEntries = requests.map((r) => ({
+    ...r,
+    journal: {
+      payment: r.paymentJournalEntryId ? entryById[r.paymentJournalEntryId] ?? null : null,
+      closing: r.closingJournalEntryId ? entryById[r.closingJournalEntryId] ?? null : null,
+      adjustments: adjustmentEntries.filter((e) => e.sourceId === r.id),
+    },
+  }));
+  const [expenseAccounts, allAccounts] = await Promise.all([
+    prisma.account.findMany({ where: { type: "EXPENSE", isActive: true }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
+    prisma.account.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true, type: true } }),
+  ]);
+
   return (
     <PaymentRequestsScreen
       currentUserId={user?.id}
       currentUserRole={user?.role}
       currentUserIsAccountant={!!currentUserFull?.position?.isAccountant}
       currentUserIsFinancialManager={!!currentUserFull?.position?.isFinancialManager}
-      requests={JSON.parse(JSON.stringify(requests))}
+      requests={JSON.parse(JSON.stringify(requestsWithEntries))}
+      expenseAccounts={expenseAccounts}
+      allAccounts={allAccounts}
       payees={JSON.parse(JSON.stringify(payees))}
       categories={categories}
       cases={cases}

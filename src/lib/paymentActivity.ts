@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export type PaymentActivityAction = "CREATED" | "APPROVED" | "REJECTED" | "PAID" | "INVOICE_UPLOADED" | "CLOSED" | "COMMENT";
+export type PaymentActivityAction = "CREATED" | "APPROVED" | "REJECTED" | "PAID" | "INVOICE_UPLOADED" | "CLOSED" | "COMMENT" | "ADJUSTED" | "RETURNED" | "RESUBMITTED";
 
 export async function logPaymentActivity(params: {
   requestId: string;
