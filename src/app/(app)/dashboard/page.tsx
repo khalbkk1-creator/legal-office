@@ -78,85 +78,59 @@ export default async function DashboardPage() {
     { href: "/hearings", label: "جلسة خلال 3 أيام", count: upcomingHearingsCount, urgent: false },
   ].filter((a) => a.count > 0);
 
-  const items: { href: string; label: string; icon: string; badge?: number; partnerOnly?: boolean; moduleKey: string }[] = [
-    { href: "/cases", label: "القضايا", icon: "📁", badge: activeCases || undefined, moduleKey: "cases" },
-    { href: "/clients", label: "العملاء", icon: "👥", moduleKey: "clients" },
-    { href: "/hearings", label: "الجلسات", icon: "📅", moduleKey: "hearings" },
-    { href: "/consultations", label: "طلبات الاستشارة", icon: "📩", badge: pendingConsultations || undefined, moduleKey: "consultations" },
-    { href: "/service-requests", label: "طلبات الخدمة", icon: "📋", badge: newRequests || undefined, moduleKey: "service-requests" },
-    { href: "/accounting", label: "النظام المحاسبي", icon: "📒", badge: unpaidInvoices || undefined, moduleKey: "accounting" },
-    { href: "/payment-requests", label: "طلبات الصرف", icon: "💸", badge: myPendingPaymentRequests || undefined, moduleKey: "payment-requests" },
-    { href: "/payees", label: "الموردون", icon: "📇", moduleKey: "payees" },
-    { href: "/quotes", label: "عروض الأسعار", icon: "📝", moduleKey: "quotes" },
-    { href: "/finance", label: "اللوحة المالية", icon: "📊", moduleKey: "finance" },
-    { href: "/analytics", label: "الإحصائيات", icon: "📈", moduleKey: "analytics" },
-    { href: "/users", label: "المستخدمون", icon: "🔑", partnerOnly: true, moduleKey: "users" },
-    { href: "/positions", label: "المسميات والصلاحيات", icon: "🛡️", partnerOnly: true, moduleKey: "positions" },
-    { href: "/api-keys", label: "مفاتيح API الخارجية", icon: "🔌", partnerOnly: true, moduleKey: "api-keys" },
-    { href: "/settings", label: "إعدادات المكتب", icon: "⚙️", partnerOnly: true, moduleKey: "settings" },
-  ];
-
   // لو عند المستخدم مسمى وظيفي محدد، نصفّي حسب صلاحياته بالضبط. لو ما عنده مسمى (حسابات قديمة)، نرجع لتصفية الدور المعتادة حفاظاً على التوافق. الشريك دائماً يشوف كل شي كصلاحية عليا ثابتة
   const hasPosition = !!currentUserFull?.positionId;
   const allowedModules = currentUserFull?.position?.allowedModules ?? [];
-  const visibleItems = isPartner
-    ? items
-    : hasPosition
-    ? items.filter((i) => allowedModules.includes(i.moduleKey))
-    : items.filter((i) => !i.partnerOnly);
+
+  const today = new Date().toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  const stats = [
+    { href: "/cases", label: "قضايا جارية", value: activeCases, moduleKey: "cases" },
+    { href: "/hearings", label: "جلسات خلال 3 أيام", value: upcomingHearingsCount, moduleKey: "hearings" },
+    { href: "/consultations", label: "استشارات بانتظار المراجعة", value: pendingConsultations, moduleKey: "consultations" },
+    { href: "/service-requests", label: "طلبات خدمة جديدة", value: newRequests, moduleKey: "service-requests" },
+    { href: "/accounting", label: "فواتير غير مسددة", value: unpaidInvoices, moduleKey: "accounting" },
+    { href: "/payment-requests", label: "طلبات صرف بانتظارك", value: myPendingPaymentRequests, moduleKey: "payment-requests" },
+  ].filter((st) => isPartner || (hasPosition ? allowedModules.includes(st.moduleKey) : true));
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-ink">مرحباً، {user?.name}</h1>
-        <p className="text-gray-500 text-sm mt-1">اختر الشاشة اللي تبي تدخلها</p>
+    <div className="max-w-5xl mx-auto space-y-8">
+      <div>
+        <p className="text-sm text-gray-500">{today}</p>
+        <h1 className="text-2xl font-bold text-ink mt-1">مرحباً، {user?.name}</h1>
       </div>
 
       {actionItems.length > 0 && (
-        <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5 mb-6">
-          <p className="text-sm font-bold text-ink mb-3 flex items-center gap-1.5">
-            <span>🔔</span> بانتظارك اليوم
-          </p>
-          <div className="space-y-2">
+        <section className="bg-white rounded-2xl border border-gray-200 p-5">
+          <h2 className="text-base font-semibold text-ink mb-3">بانتظارك اليوم</h2>
+          <div className="grid gap-2 sm:grid-cols-2">
             {actionItems.map((a) => (
               <Link
                 key={a.href + a.label}
                 href={a.href}
-                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm transition hover:opacity-80 ${
-                  a.urgent ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
+                className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm border transition hover:shadow-card ${
+                  a.urgent ? "bg-red-50 border-red-100 text-red-800" : "bg-amber-50 border-amber-100 text-amber-800"
                 }`}
               >
                 <span>{a.label}</span>
-                <span
-                  className={`text-xs font-bold rounded-full px-2 py-0.5 ${
-                    a.urgent ? "bg-red-600 text-white" : "bg-amber-500 text-white"
-                  }`}
-                >
-                  {a.count}
-                </span>
+                <span className={`text-xs font-bold rounded-full px-2.5 py-0.5 text-white ${a.urgent ? "bg-red-600" : "bg-amber-500"}`}>{a.count}</span>
               </Link>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {visibleItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex flex-col items-center justify-center gap-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-primary-300 hover:shadow-md transition relative"
-          >
-            {!!item.badge && (
-              <span className="absolute top-2 left-2 text-[10px] bg-primary-700 text-white rounded-full px-1.5 py-0.5 font-medium min-w-[18px] text-center">
-                {item.badge}
-              </span>
-            )}
-            <span className="text-3xl">{item.icon}</span>
-            <span className="text-sm font-medium text-ink text-center">{item.label}</span>
-          </Link>
-        ))}
-      </div>
+      <section>
+        <h2 className="text-base font-semibold text-ink mb-3">نظرة عامة</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          {stats.map((st) => (
+            <Link key={st.href + st.label} href={st.href} className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-primary-300 transition">
+              <p className="text-3xl font-bold text-ink tabular-nums">{st.value}</p>
+              <p className="text-sm text-gray-500 mt-1">{st.label}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
