@@ -123,7 +123,7 @@ export default async function PrintSalePage({ params }: { params: { id: string }
           </div>
 
           {/* حالة الدفع + QR */}
-          <div className="border-t-2 border-gray-100 pt-6 flex items-center justify-between">
+          <div className="border-t-2 border-gray-100 pt-6 grid grid-cols-[1fr_auto] items-center gap-6 print:break-inside-avoid">
             <div>
               <p className="text-xs text-gray-400 mb-1">حالة الدفع</p>
               <span
@@ -141,7 +141,7 @@ export default async function PrintSalePage({ params }: { params: { id: string }
 
             {qrDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={qrDataUrl} alt="ZATCA QR" className="w-28 h-28" />
+              <img src={qrDataUrl} alt="ZATCA QR" className="w-28 h-28 shrink-0 justify-self-start" />
             ) : (
               <p className="text-[11px] text-amber-600 max-w-[180px] text-left">
                 💡 لإظهار رمز الفوترة الإلكترونية، أضف "الرقم الضريبي" و"اسم المكتب" من صفحة الإعدادات.
