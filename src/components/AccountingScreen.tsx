@@ -81,6 +81,66 @@ type JournalEntry = {
 };
 type TrialBalanceRow = { id: string; code: string; name: string; type: string; debit: number; credit: number; balance: number };
 
+type TabKey = "invoices" | "expenses" | "journal" | "accounts" | "trial" | "statements" | "vat" | "audit" | "aging" | "opening" | "lock" | "recurring" | "reconciliation" | "settings";
+
+const TAB_GROUPS: { title: string; tabs: { key: TabKey; label: string }[] }[] = [
+  {
+    title: "التشغيل",
+    tabs: [
+      { key: "invoices", label: "الفواتير" },
+      { key: "expenses", label: "المصاريف" },
+      { key: "journal", label: "القيود اليومية" },
+      { key: "recurring", label: "القيود المتكررة" },
+    ],
+  },
+  {
+    title: "التقارير",
+    tabs: [
+      { key: "trial", label: "ميزان المراجعة" },
+      { key: "statements", label: "القوائم المالية" },
+      { key: "vat", label: "ضريبة القيمة المضافة" },
+      { key: "aging", label: "أعمار الديون" },
+    ],
+  },
+  {
+    title: "الإعداد والرقابة",
+    tabs: [
+      { key: "accounts", label: "دليل الحسابات" },
+      { key: "opening", label: "الأرصدة الافتتاحية" },
+      { key: "lock", label: "إقفال الفترات" },
+      { key: "reconciliation", label: "مطابقة البنك" },
+      { key: "audit", label: "سجل التدقيق" },
+      { key: "settings", label: "إعدادات المحاسبة" },
+    ],
+  },
+];
+
+const TAB_SUBTITLES: Record<TabKey, string> = {
+  invoices: "فواتير الخدمات والإيرادات",
+  expenses: "مصاريف المكتب التشغيلية",
+  journal: "القيود اليومية اليدوية والآلية",
+  recurring: "قيود تترحّل تلقائياً كل شهر",
+  trial: "أرصدة كل الحسابات مدين ودائن",
+  statements: "قائمة الدخل والميزانية العمومية",
+  vat: "ضريبة المخرجات والمدخلات والمستحق",
+  aging: "المستحقات غير المسددة حسب العمر",
+  accounts: "شجرة الحسابات بثلاث مستويات",
+  opening: "أرصدة بداية استخدام النظام",
+  lock: "حماية الفترات المراجعة من التعديل",
+  reconciliation: "مطابقة كشف البنك مع الدفتر",
+  audit: "كل إجراء محاسبي ومن نفّذه ومتى",
+  settings: "صلاحيات كل مسمى وظيفي داخل المحاسبة",
+};
+
+function Kpi({ label, value, tone = "text-ink" }: { label: string; value: number; tone?: string }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <p className={`text-xl font-bold tabular-nums ${tone}`}>{value.toLocaleString()} <span className="text-xs font-normal text-gray-400">ر.س</span></p>
+      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
 export default function AccountingScreen({
   accounts,
   entries,
@@ -129,6 +189,9 @@ export default function AccountingScreen({
 
   const totalDebit = trialBalance.reduce((s, r) => s + r.debit, 0);
   const totalCredit = trialBalance.reduce((s, r) => s + r.credit, 0);
+  const netIncome =
+    trialBalance.filter((r) => r.type === "REVENUE").reduce((s, r) => s + r.balance, 0) -
+    trialBalance.filter((r) => r.type === "EXPENSE").reduce((s, r) => s + r.balance, 0);
 
   return (
     <div className="space-y-6">
@@ -136,7 +199,7 @@ export default function AccountingScreen({
         <div>
           <h1 className="text-2xl font-bold text-ink">النظام المحاسبي</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {tab === "invoices" ? "فواتير الخدمات والإيرادات" : tab === "expenses" ? "مصاريف المكتب التشغيلية" : tab === "statements" ? "قائمة الدخل والميزانية العمومية" : "دليل الحسابات والقيود اليومية وميزان المراجعة"}
+            {TAB_SUBTITLES[tab]}
           </p>
         </div>
         {(tab === "invoices" || tab === "expenses") && (
@@ -149,123 +212,37 @@ export default function AccountingScreen({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 bg-gray-100 rounded-xl p-1">
-        <button
-          onClick={() => setTab("invoices")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "invoices" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          💰 الفواتير
-        </button>
-        <button
-          onClick={() => setTab("expenses")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "expenses" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          💸 المصاريف
-        </button>
-        <button
-          onClick={() => setTab("journal")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "journal" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          📒 القيود اليومية
-        </button>
-        <button
-          onClick={() => setTab("accounts")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "accounts" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          📚 دليل الحسابات
-        </button>
-        <button
-          onClick={() => setTab("trial")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "trial" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          ⚖️ ميزان المراجعة
-        </button>
-        <button
-          onClick={() => setTab("statements")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "statements" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          📄 القوائم المالية
-        </button>
-        <button
-          onClick={() => setTab("vat")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "vat" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          🧾 ضريبة القيمة المضافة
-        </button>
-        <button
-          onClick={() => setTab("audit")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "audit" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          📜 سجل التدقيق
-        </button>
-        <button
-          onClick={() => setTab("aging")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "aging" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          📅 أعمار الديون
-        </button>
-        <button
-          onClick={() => setTab("opening")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "opening" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          🏁 الأرصدة الافتتاحية
-        </button>
-        <button
-          onClick={() => setTab("lock")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "lock" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          🔒 إقفال الفترات
-        </button>
-        <button
-          onClick={() => setTab("recurring")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "recurring" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          🔁 القيود المتكررة
-        </button>
-        <button
-          onClick={() => setTab("reconciliation")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-            tab === "reconciliation" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          🏦 مطابقة البنك
-        </button>
-        {canManageSettings && (
-          <button
-            onClick={() => setTab("settings")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-              tab === "settings" ? "bg-white text-primary-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            🧮 إعدادات المحاسبة
-          </button>
-        )}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Kpi label="إيرادات هذا الشهر" value={salesSummary.totalThisMonth} />
+        <Kpi label="مصاريف هذا الشهر" value={expenseSummary.totalThisMonth} tone="text-red-600" />
+        <Kpi label="مستحقات غير مسددة" value={salesSummary.totalOutstanding} tone={salesSummary.totalOutstanding > 0 ? "text-amber-600" : "text-ink"} />
+        <Kpi label="صافي الربح التراكمي" value={netIncome} tone={netIncome >= 0 ? "text-primary-700" : "text-red-600"} />
       </div>
 
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 space-y-2">
+        {TAB_GROUPS.map((g) => {
+          const visible = g.tabs.filter((t) => t.key !== "settings" || canManageSettings);
+          if (visible.length === 0) return null;
+          return (
+            <div key={g.title} className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-semibold text-gray-400 w-24 shrink-0 pr-2">{g.title}</span>
+              <div className="flex items-center gap-1 flex-wrap">
+                {visible.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setTab(t.key)}
+                    className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition ${
+                      tab === t.key ? "bg-primary-700 text-white font-medium shadow-sm" : "text-gray-600 hover:bg-gray-100 hover:text-ink"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
       {tab === "invoices" && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
