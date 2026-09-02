@@ -492,7 +492,24 @@ model PaymentRequest {
   createdAt DateTime @default(now())
 
   @@index([status])
+  activities PaymentRequestActivity[]
+
   @@index([requestedById])
+  @@schema("public")
+}
+
+model PaymentRequestActivity {
+  id        String   @id @default(cuid())
+  requestId String
+  request   PaymentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId    String
+  userName  String
+  action    String // CREATED / APPROVED / REJECTED / PAID / INVOICE_UPLOADED / CLOSED / COMMENT
+  stage     String? // MANAGER / ACCOUNTANT / FINANCE
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
   @@schema("public")
 }
 

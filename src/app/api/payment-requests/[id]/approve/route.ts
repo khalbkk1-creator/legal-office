@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { logPaymentActivity } from "@/lib/paymentActivity";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -46,6 +47,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       description: `اعتمد (كمدير) طلب صرف: ${request.requestNumber}`,
     });
 
+    await logPaymentActivity({ requestId: params.id, userId: actingUser.id, userName: actingUser.name, action: "APPROVED", stage: "MANAGER", note });
+
     return NextResponse.json(updated);
   }
 
@@ -68,6 +71,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       description: `اعتمد (كمحاسب) طلب صرف: ${request.requestNumber}`,
     });
 
+    await logPaymentActivity({ requestId: params.id, userId: actingUser.id, userName: actingUser.name, action: "APPROVED", stage: "ACCOUNTANT", note });
+
     return NextResponse.json(updated);
   }
 
@@ -89,6 +94,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       entityId: params.id,
       description: `اعتمد (كمدير مالي) طلب صرف: ${request.requestNumber} — رجع للموظف لتنفيذ الصرف`,
     });
+
+    await logPaymentActivity({ requestId: params.id, userId: actingUser.id, userName: actingUser.name, action: "APPROVED", stage: "FINANCE", note });
 
     return NextResponse.json(updated);
   }

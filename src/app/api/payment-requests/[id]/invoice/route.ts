@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabaseAdmin";
 import { logAudit } from "@/lib/audit";
+import { logPaymentActivity } from "@/lib/paymentActivity";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -56,6 +57,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     entityId: params.id,
     description: `أرفق فاتورة المورد لطلب صرف: ${request.requestNumber}`,
   });
+
+  await logPaymentActivity({ requestId: params.id, userId: user.id, userName: user.name, action: "INVOICE_UPLOADED" });
 
   return NextResponse.json(updated);
 }

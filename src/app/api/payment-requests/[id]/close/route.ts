@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { postJournalEntry, getSystemAccountId, assertDateNotLocked } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
+import { logPaymentActivity } from "@/lib/paymentActivity";
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -79,6 +80,8 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     entityId: params.id,
     description: `أقفل فاتورة مورد لطلب صرف: ${request.requestNumber} ورحّل قيد المصروف الفعلي`,
   });
+
+  await logPaymentActivity({ requestId: params.id, userId: actingUser.id, userName: actingUser.name, action: "CLOSED" });
 
   return NextResponse.json(updated);
 }

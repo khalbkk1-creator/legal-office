@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { logPaymentActivity } from "@/lib/paymentActivity";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -57,6 +58,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     entityId: params.id,
     description: `رفض طلب صرف: ${request.requestNumber} — السبب: ${reason}`,
   });
+
+  await logPaymentActivity({ requestId: params.id, userId: actingUser.id, userName: actingUser.name, action: "REJECTED", stage: request.status === "PENDING_MANAGER" ? "MANAGER" : request.status === "PENDING_ACCOUNTANT" ? "ACCOUNTANT" : "FINANCE", note: reason });
 
   return NextResponse.json(updated);
 }

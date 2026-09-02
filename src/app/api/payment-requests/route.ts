@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabaseAdmin";
 import { logAudit } from "@/lib/audit";
+import { logPaymentActivity } from "@/lib/paymentActivity";
 
 async function nextRequestNumber() {
   const year = new Date().getFullYear();
@@ -107,6 +108,8 @@ export async function POST(req: NextRequest) {
     entityId: created.id,
     description: `أنشأ طلب صرف: ${requestNumber} — ${description} (${amount.toLocaleString()} ر.س) للمستفيد ${created.payee.name}`,
   });
+
+  await logPaymentActivity({ requestId: created.id, userId: user.id, userName: user.name, action: "CREATED" });
 
   return NextResponse.json(created, { status: 201 });
 }

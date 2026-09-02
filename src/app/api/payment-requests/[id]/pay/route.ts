@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { postJournalEntry, assertDateNotLocked } from "@/lib/accounting";
 import { supabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabaseAdmin";
 import { logAudit } from "@/lib/audit";
+import { logPaymentActivity } from "@/lib/paymentActivity";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -95,6 +96,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     entityId: params.id,
     description: `صرف ورحّل دفعة طلب صرف: ${request.requestNumber} (${request.amount.toLocaleString()} ر.س)`,
   });
+
+  await logPaymentActivity({ requestId: params.id, userId: user.id, userName: user.name, action: "PAID" });
 
   return NextResponse.json(updated);
 }

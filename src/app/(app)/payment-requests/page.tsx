@@ -21,6 +21,7 @@ export default async function PaymentRequestsPage() {
         financeApprovedBy: true,
         rejectedBy: true,
         closedBy: true,
+        activities: { orderBy: { createdAt: "asc" } },
       },
       orderBy: { createdAt: "desc" },
     }),
