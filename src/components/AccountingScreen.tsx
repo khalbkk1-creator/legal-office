@@ -34,7 +34,9 @@ const sourceLabels: Record<string, string> = {
   PAYMENT_REQUEST_CLOSE: "إقفال طلب صرف",
 };
 
-type Account = { id: string; code: string; name: string; type: string; isSystem: boolean; isActive: boolean; parentId: string | null };
+type Account = { id: string; code: string; name: string; type: string; isSystem: boolean; isActive: boolean; parentId: string | null; analysisType?: string };
+type DimOption = { id: string; name: string; code?: string };
+const analysisLabels: Record<string, string> = { NONE: "بدون تحليل", SUPPLIER: "تحليل بالموردين", CLIENT: "تحليل بالعملاء", COST_CENTER: "تحليل بمراكز التكلفة" };
 type Sale = {
   id: string;
   invoiceNumber: string;
@@ -515,11 +517,11 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
   const router = useRouter();
 
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ code: "", name: "", type: "EXPENSE", parentId: "" });
+  const [form, setForm] = useState({ code: "", name: "", type: "EXPENSE", parentId: "", analysisType: "NONE" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ code: "", name: "", type: "", parentId: "" });
+  const [editForm, setEditForm] = useState({ code: "", name: "", type: "", parentId: "", analysisType: "NONE" });
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [resetting, setResetting] = useState(false);
@@ -542,7 +544,7 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
       setError(data.error || "تعذر إضافة الحساب");
       return;
     }
-    setForm({ code: "", name: "", type: "EXPENSE", parentId: "" });
+    setForm({ code: "", name: "", type: "EXPENSE", parentId: "", analysisType: "NONE" });
     setShowForm(false);
     router.refresh();
   }
@@ -556,6 +558,7 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
         code: editForm.code,
         type: editForm.type,
         parentId: editForm.parentId || null,
+        analysisType: editForm.analysisType,
       }),
     });
     setEditingId(null);
@@ -564,7 +567,7 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
 
   function startEdit(a: Account) {
     setEditingId(a.id);
-    setEditForm({ code: a.code, name: a.name, type: a.type, parentId: a.parentId ?? "" });
+    setEditForm({ code: a.code, name: a.name, type: a.type, parentId: a.parentId ?? "", analysisType: a.analysisType ?? "NONE" });
   }
 
   function toggleCollapse(id: string) {
@@ -713,6 +716,12 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">التحليل — يفرض اختيار بُعد على كل قيد يمس هذا الحساب</label>
+            <select value={form.analysisType} onChange={(e) => setForm((f) => ({ ...f, analysisType: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+              {Object.entries(analysisLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
           <button
             type="submit"
@@ -762,6 +771,14 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
                           className="rounded-lg border border-gray-300 px-2 py-1 text-sm w-32"
                           placeholder="الاسم"
                         />
+                        <select
+                          value={editForm.analysisType}
+                          onChange={(e) => setEditForm((f) => ({ ...f, analysisType: e.target.value }))}
+                          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                          title="التحليل"
+                        >
+                          {Object.entries(analysisLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
                         {!a.isSystem && (
                           <>
                             <input
@@ -808,6 +825,9 @@ function AccountsTab({ accounts, trialBalance }: { accounts: Account[]; trialBal
                           <Link href={`/accounting/ledger/${a.id}`} className="text-primary-700 hover:underline">
                             {a.name}
                           </Link>
+                        )}
+                        {a.analysisType && a.analysisType !== "NONE" && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">{analysisLabels[a.analysisType]}</span>
                         )}
                       </div>
                     )}
@@ -868,12 +888,28 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
   const [filterSource, setFilterSource] = useState("ALL");
   const [description, setDescription] = useState("");
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
-  const [lines, setLines] = useState([
+  const [lines, setLines] = useState<{ accountId: string; debit: string; credit: string; dim?: string }[]>([
     { accountId: "", debit: "", credit: "" },
     { accountId: "", debit: "", credit: "" },
   ]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [dims, setDims] = useState<{ payees: DimOption[]; clients: DimOption[]; costCenters: DimOption[] }>({ payees: [], clients: [], costCenters: [] });
+
+  useEffect(() => {
+    if (!accounts.some((a) => a.analysisType && a.analysisType !== "NONE")) return;
+    Promise.all([
+      fetch("/api/payees").then((r) => r.json()).catch(() => []),
+      fetch("/api/clients/basic").then((r) => r.json()).catch(() => []),
+      fetch("/api/cost-centers").then((r) => r.json()).catch(() => []),
+    ]).then(([payees, clients, costCenters]) =>
+      setDims({ payees: Array.isArray(payees) ? payees : [], clients: Array.isArray(clients) ? clients : [], costCenters: Array.isArray(costCenters) ? costCenters : [] })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const analysisOf = (accountId: string) => accounts.find((a) => a.id === accountId)?.analysisType ?? "NONE";
+  const dimOptions = (t: string) => (t === "SUPPLIER" ? dims.payees : t === "CLIENT" ? dims.clients : t === "COST_CENTER" ? dims.costCenters : []);
 
   const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
@@ -887,8 +923,8 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
     return true;
   });
 
-  function updateLine(i: number, field: "accountId" | "debit" | "credit", value: string) {
-    setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, [field]: value } : l)));
+  function updateLine(i: number, field: "accountId" | "debit" | "credit" | "dim", value: string) {
+    setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, [field]: value, ...(field === "accountId" ? { dim: "" } : {}) } : l)));
   }
 
   function addLine() {
@@ -1003,7 +1039,17 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
         status,
         lines: lines
           .filter((l) => l.accountId && (Number(l.debit) > 0 || Number(l.credit) > 0))
-          .map((l) => ({ accountId: l.accountId, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 })),
+          .map((l) => {
+            const t = analysisOf(l.accountId);
+            return {
+              accountId: l.accountId,
+              debit: Number(l.debit) || 0,
+              credit: Number(l.credit) || 0,
+              payeeId: t === "SUPPLIER" ? l.dim || null : null,
+              clientId: t === "CLIENT" ? l.dim || null : null,
+              costCenterId: t === "COST_CENTER" ? l.dim || null : null,
+            };
+          }),
       }),
     });
 
@@ -1072,6 +1118,12 @@ function JournalTab({ entries, accounts }: { entries: JournalEntry[]; accounts: 
                   value={l.accountId}
                   onChange={(id) => updateLine(i, "accountId", id)}
                 />
+                {analysisOf(l.accountId) !== "NONE" && (
+                  <select value={l.dim ?? ""} onChange={(e) => updateLine(i, "dim", e.target.value)} className="w-44 rounded-lg border border-indigo-300 px-2 py-2 text-sm bg-indigo-50/40" title={analysisLabels[analysisOf(l.accountId)]}>
+                    <option value="">{analysisLabels[analysisOf(l.accountId)]}…</option>
+                    {dimOptions(analysisOf(l.accountId)).map((d) => <option key={d.id} value={d.id}>{d.code ? `${d.code} — ` : ""}{d.name}</option>)}
+                  </select>
+                )}
                 <input
                   type="number"
                   min="0"

@@ -22,6 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const data: Record<string, unknown> = {};
   if ("name" in body) data.name = body.name;
   if ("isActive" in body) data.isActive = !!body.isActive;
+  if ("analysisType" in body) data.analysisType = ["SUPPLIER", "CLIENT", "COST_CENTER"].includes(body.analysisType) ? body.analysisType : "NONE";
   if (!account.isSystem) {
     if ("code" in body) data.code = body.code;
     if ("type" in body) data.type = body.type;

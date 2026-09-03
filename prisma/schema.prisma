@@ -293,6 +293,7 @@ model Account {
   children Account[]   @relation("AccountHierarchy")
   isSystem Boolean     @default(false) // حساب أساسي بالنظام، لا يُحذف
   isActive Boolean     @default(true)
+  analysisType String  @default("NONE") // NONE / SUPPLIER / CLIENT / COST_CENTER — يفرض اختيار بُعد تحليلي على القيود
   createdAt DateTime   @default(now())
 
   journalLines JournalEntryLine[]
@@ -343,8 +344,32 @@ model JournalEntryLine {
   credit         Float        @default(0)
   description    String?
 
+  // الأبعاد التحليلية (لا تُنشئ حسابات فرعية بالدليل)
+  payeeId      String?
+  payee        Payee?      @relation(fields: [payeeId], references: [id])
+  clientId     String?
+  client       Client?     @relation(fields: [clientId], references: [id])
+  costCenterId String?
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id])
+
   @@index([journalEntryId])
   @@index([accountId])
+  @@index([payeeId])
+  @@index([clientId])
+  @@index([costCenterId])
+  @@schema("public")
+}
+
+model CostCenter {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  journalLines    JournalEntryLine[]
+  paymentRequests PaymentRequest[]
+
   @@schema("public")
 }
 
@@ -416,13 +441,14 @@ model Payee {
   type      String   @default("INDIVIDUAL") // INDIVIDUAL / COMPANY
   phone     String?
   notes     String?
-  accountId String   @unique // حساب ذمم دائنة مستقل لهذا الشخص/الجهة
-  account   Account  @relation(fields: [accountId], references: [id])
+  accountId String?  @unique // (قديم) حساب فرعي — الموردون الجدد يُعالَجون كبُعد تحليلي على ذمم الموردين 2100
+  account   Account? @relation(fields: [accountId], references: [id])
   clientId  String?  @unique // لو المستفيد هو عميل موجود بقاعدة العملاء (مبلغ نرجعه له)
   client    Client?  @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
 
   paymentRequests PaymentRequest[]
+  journalLines    JournalEntryLine[]
 
   @@schema("public")
 }
@@ -442,6 +468,9 @@ model PaymentRequest {
 
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id])
+
+  costCenterId String?
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id])
 
   requestedById String
   requestedBy   User   @relation("RequestedPayments", fields: [requestedById], references: [id])
@@ -729,6 +758,7 @@ model Client {
   serviceRequests ServiceRequest[]
   consultationRequests ConsultationRequest[]
   payeeLink Payee?
+  journalLines JournalEntryLine[]
 
   @@index([phone])
   @@index([email])

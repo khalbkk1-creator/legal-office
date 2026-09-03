@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   const created = await prisma.account.create({
-    data: { code, name, type, parentId: body.parentId || undefined },
+    data: { code, name, type, parentId: body.parentId || undefined, analysisType: ["SUPPLIER", "CLIENT", "COST_CENTER"].includes(body.analysisType) ? body.analysisType : "NONE" },
   });
 
   await logAudit({
