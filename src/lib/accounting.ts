@@ -189,7 +189,7 @@ export async function postJournalEntry(params: {
   sourceId?: string;
   createdById?: string;
   status?: "DRAFT" | "POSTED";
-  lines: { accountId: string; debit?: number; credit?: number; description?: string }[];
+  lines: { accountId: string; debit?: number; credit?: number; description?: string; payeeId?: string | null; clientId?: string | null; costCenterId?: string | null }[];
 }) {
   const totalDebit = params.lines.reduce((sum, l) => sum + (l.debit ?? 0), 0);
   const totalCredit = params.lines.reduce((sum, l) => sum + (l.credit ?? 0), 0);
@@ -215,6 +215,9 @@ export async function postJournalEntry(params: {
           debit: l.debit ?? 0,
           credit: l.credit ?? 0,
           description: l.description,
+          payeeId: l.payeeId ?? undefined,
+          clientId: l.clientId ?? undefined,
+          costCenterId: l.costCenterId ?? undefined,
         })),
       },
     },
