@@ -9,16 +9,23 @@ export default async function PayeesPage() {
     orderBy: { name: "asc" },
   });
 
-  const accountIds = payees.map((p) => p.accountId);
-  const sums = await prisma.journalEntryLine.groupBy({
-    by: ["accountId"],
-    where: { accountId: { in: accountIds }, journalEntry: { status: "POSTED" } },
-    _sum: { debit: true, credit: true },
-  });
-  const balanceByAccount: Record<string, number> = {};
-  for (const s of sums) {
-    balanceByAccount[s.accountId] = (s._sum.credit ?? 0) - (s._sum.debit ?? 0);
-  }
+  // الرصيد = سطور القيود التي تحمل تحليل المورد + (للموردين القدامى) سطور حسابه الفرعي
+  const [byDim, byLegacy] = await Promise.all([
+    prisma.journalEntryLine.groupBy({
+      by: ["payeeId"],
+      where: { payeeId: { not: null }, journalEntry: { status: "POSTED" } },
+      _sum: { debit: true, credit: true },
+    }),
+    prisma.journalEntryLine.groupBy({
+      by: ["accountId"],
+      where: { payeeId: null, accountId: { in: payees.map((p) => p.accountId).filter(Boolean) as string[] }, journalEntry: { status: "POSTED" } },
+      _sum: { debit: true, credit: true },
+    }),
+  ]);
+  const balanceByPayee: Record<string, number> = {};
+  for (const s of byDim) if (s.payeeId) balanceByPayee[s.payeeId] = (s._sum.credit ?? 0) - (s._sum.debit ?? 0);
+  const legacyByAccount: Record<string, number> = {};
+  for (const s of byLegacy) legacyByAccount[s.accountId] = (s._sum.credit ?? 0) - (s._sum.debit ?? 0);
 
   const requestCounts = await prisma.paymentRequest.groupBy({ by: ["payeeId"], _count: true });
   const countByPayee: Record<string, number> = {};
@@ -29,7 +36,7 @@ export default async function PayeesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-ink">الموردون</h1>
-          <p className="text-gray-500 text-sm mt-1">قاعدة بيانات كل الجهات والأشخاص المستفيدين من طلبات الصرف</p>
+          <p className="text-gray-500 text-sm mt-1">بُعد تحليلي على حساب ذمم الموردين — لا يُنشئ حسابات بالدليل</p>
         </div>
         <Link
           href="/payment-requests"
@@ -53,7 +60,7 @@ export default async function PayeesPage() {
           </thead>
           <tbody>
             {payees.map((p) => {
-              const balance = balanceByAccount[p.accountId] ?? 0;
+              const balance = (balanceByPayee[p.id] ?? 0) + (p.accountId ? legacyByAccount[p.accountId] ?? 0 : 0);
               return (
                 <tr key={p.id} className="border-t border-gray-50">
                   <td className="px-5 py-3 font-medium text-ink">
@@ -70,7 +77,7 @@ export default async function PayeesPage() {
                     {balance < 0 && <span className="text-xs text-amber-500 mr-1">(دفعات بانتظار فواتير)</span>}
                   </td>
                   <td className="px-5 py-3">
-                    <Link href={`/accounting/ledger/${p.accountId}`} className="text-xs text-primary-700 hover:underline">
+                    <Link href={`/payees/${p.id}/ledger`} className="text-xs text-primary-700 hover:underline">
                       دفتر الأستاذ
                     </Link>
                   </td>
