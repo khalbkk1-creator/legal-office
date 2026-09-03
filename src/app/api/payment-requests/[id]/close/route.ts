@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { postJournalEntry, getSystemAccountId, assertDateNotLocked } from "@/lib/accounting";
 import { logAudit } from "@/lib/audit";
 import { logPaymentActivity } from "@/lib/paymentActivity";
+import { supplierLineTarget } from "@/lib/supplierLedger";
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
 
@@ -40,19 +41,28 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   }
 
   const netAmount = request.amount - request.vatAmount;
-  const expenseAccountId = request.category
-    ? (await prisma.account.findFirst({ where: { name: request.category.name, type: "EXPENSE" } }))?.id
-    : undefined;
+  const body = await req.json().catch(() => ({}));
+  const chosenExpenseAccountId = (body?.expenseAccountId as string | undefined) || undefined;
+  if (chosenExpenseAccountId) {
+    const chosen = await prisma.account.findUnique({ where: { id: chosenExpenseAccountId } });
+    if (!chosen || chosen.type !== "EXPENSE") {
+      return NextResponse.json({ error: "حساب المصروف المختار غير صالح" }, { status: 400 });
+    }
+  }
+  const expenseAccountId =
+    chosenExpenseAccountId ??
+    (request.category ? (await prisma.account.findFirst({ where: { name: request.category.name, type: "EXPENSE" } }))?.id : undefined);
   const fallbackExpenseAccountId = expenseAccountId ?? (await getSystemAccountId("5100"));
 
-  const lines: { accountId: string; debit?: number; credit?: number; description?: string }[] = [
-    { accountId: fallbackExpenseAccountId, debit: netAmount, description: request.description },
+  const lines: { accountId: string; debit?: number; credit?: number; description?: string; payeeId?: string | null; costCenterId?: string | null }[] = [
+    { accountId: fallbackExpenseAccountId, debit: netAmount, description: request.description, costCenterId: request.costCenterId ?? undefined },
   ];
   if (request.vatAmount > 0) {
     const vatAccountId = await getSystemAccountId("1150");
     lines.push({ accountId: vatAccountId, debit: request.vatAmount, description: `ضريبة مدخلات — ${request.description}` });
   }
-  lines.push({ accountId: request.payee.accountId, credit: request.amount, description: `إقفال دفعة — ${request.requestNumber}` });
+  const supplier = await supplierLineTarget(request.payee);
+  lines.push({ ...supplier, credit: request.amount, description: `إقفال دفعة — ${request.requestNumber}` });
 
   const journalEntry = await postJournalEntry({
     description: `إقفال فاتورة مورد — ${request.requestNumber} — ${request.description}`,

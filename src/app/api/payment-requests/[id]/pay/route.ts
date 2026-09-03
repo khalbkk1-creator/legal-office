@@ -6,6 +6,7 @@ import { postJournalEntry, assertDateNotLocked } from "@/lib/accounting";
 import { supabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabaseAdmin";
 import { logAudit } from "@/lib/audit";
 import { logPaymentActivity } from "@/lib/paymentActivity";
+import { supplierLineTarget } from "@/lib/supplierLedger";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -65,13 +66,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     transferProofName = file.name;
   }
 
+  const supplier = await supplierLineTarget(request.payee);
   const journalEntry = await postJournalEntry({
     description: `دفعة لمورد — ${request.requestNumber}`,
     sourceType: "PAYMENT_REQUEST_DISBURSEMENT",
     sourceId: request.id,
     createdById: user.id,
     lines: [
-      { accountId: request.payee.accountId, debit: request.amount, description: `دفعة — ${request.requestNumber}` },
+      { ...supplier, debit: request.amount, description: `دفعة — ${request.requestNumber}`, costCenterId: request.costCenterId ?? undefined },
       { accountId: paymentAccountId, credit: request.amount, description: `دفعة — ${request.requestNumber}` },
     ],
   });
