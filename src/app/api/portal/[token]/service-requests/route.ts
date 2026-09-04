@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { resolvePortalClientByToken } from "@/lib/portalAuth";
 
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
-  const client = await prisma.client.findUnique({ where: { accessToken: params.token } });
+  const client = await resolvePortalClientByToken(params.token);
   if (!client) return NextResponse.json({ error: "رابط غير صالح" }, { status: 404 });
 
   const body = await req.json();

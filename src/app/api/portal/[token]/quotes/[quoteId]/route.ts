@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { resolvePortalClientByToken } from "@/lib/portalAuth";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { token: string; quoteId: string } }
 ) {
-  const client = await prisma.client.findUnique({ where: { accessToken: params.token } });
+  const client = await resolvePortalClientByToken(params.token);
   if (!client) return NextResponse.json({ error: "رابط غير صالح" }, { status: 404 });
 
   const quote = await prisma.quotation.findUnique({ where: { id: params.quoteId } });

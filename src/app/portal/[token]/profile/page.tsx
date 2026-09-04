@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { resolvePortalClientByToken } from "@/lib/portalAuth";
 import ProfileForm from "./ProfileForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortalProfilePage({ params }: { params: { token: string } }) {
-  const client = await prisma.client.findUnique({ where: { accessToken: params.token } });
+  const client = await resolvePortalClientByToken(params.token);
   if (!client) notFound();
 
   return (

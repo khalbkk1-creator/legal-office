@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import PortalLinkGenerator from "./PortalLinkGenerator";
+import PortalSecurityPanel from "./PortalSecurityPanel";
 import Timeline, { TimelineEvent } from "@/components/Timeline";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,7 @@ export default async function ClientDetailPage({ params, searchParams }: { param
       serviceRequests: { orderBy: { createdAt: "desc" } },
       quotations: { orderBy: { createdAt: "desc" } },
       sales: { orderBy: { saleDate: "desc" } },
+      portalAccessLogs: { orderBy: { createdAt: "desc" }, take: 30 },
     },
   });
   if (!client) notFound();
@@ -269,13 +271,23 @@ export default async function ClientDetailPage({ params, searchParams }: { param
         )}
 
         {tab === "portal" && (
-          <div className="max-w-2xl space-y-4">
-            <Panel title="حالة البوابة">
-              <Field label="الحساب" value={client.passwordHash ? "مفعّل بكلمة مرور" : "غير مفعّل"} />
-              <Field label="رابط الدخول المباشر" value={client.accessToken ? "موجود" : "غير مُنشأ"} />
-              <Field label="البريد" value={client.email} ltr />
-            </Panel>
-            <PortalLinkGenerator clientId={client.id} existingToken={client.accessToken} clientPhone={client.phone} />
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
+            <div className="space-y-4">
+              <Panel title="حالة البوابة">
+                <Field label="الحساب" value={client.passwordHash ? "مفعّل بكلمة مرور" : "غير مفعّل"} />
+                <Field label="البريد" value={client.email} ltr />
+                <Field label="آخر دخول" value={client.lastPortalLoginAt ? client.lastPortalLoginAt.toLocaleString("ar-SA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "لم يدخل بعد"} />
+              </Panel>
+              <PortalLinkGenerator clientId={client.id} existingToken={client.accessToken} clientPhone={client.phone} />
+            </div>
+            <PortalSecurityPanel
+              clientId={client.id}
+              portalDisabled={client.portalDisabled}
+              lockedUntil={client.lockedUntil?.toISOString() ?? null}
+              tokenExpiresAt={client.accessTokenExpiresAt?.toISOString() ?? null}
+              hasToken={!!client.accessToken}
+              logs={client.portalAccessLogs.map((l) => ({ id: l.id, event: l.event, ip: l.ip, userAgent: l.userAgent, path: l.path, detail: l.detail, createdAt: l.createdAt.toISOString() }))}
+            />
           </div>
         )}
       </div>

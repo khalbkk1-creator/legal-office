@@ -750,6 +750,14 @@ model Client {
   notes     String?
   accessToken String? @unique // رمز رابط بوابة العميل (الطريقة القديمة)
   passwordHash String? // كلمة مرور حساب بوابة العميل (تسجيل الدخول بالإيميل)
+
+  // حماية البوابة
+  accessTokenExpiresAt DateTime? // انتهاء صلاحية الرابط
+  portalDisabled       Boolean   @default(false) // تعطيل وصول العميل للبوابة بالكامل
+  failedLoginCount     Int       @default(0)
+  lockedUntil          DateTime? // قفل مؤقت بعد محاولات فاشلة
+  lastPortalLoginAt    DateTime?
+  portalAccessLogs     PortalAccessLog[]
   createdAt DateTime   @default(now())
 
   cases Case[]
@@ -762,6 +770,21 @@ model Client {
 
   @@index([phone])
   @@index([email])
+  @@schema("public")
+}
+
+model PortalAccessLog {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  event     String // LINK_ACCESS / LOGIN_SUCCESS / LOGIN_FAILED / LOCKED / REGISTER / PROFILE_UPDATE / LINK_REVOKED / PORTAL_DISABLED
+  ip        String?
+  userAgent String?
+  path      String?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
   @@schema("public")
 }
 
