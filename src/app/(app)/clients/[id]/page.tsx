@@ -123,6 +123,9 @@ export default async function ClientDetailPage({ params, searchParams }: { param
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <Link href={`/print/statement/client/${client.id}`} target="_blank" className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg px-4 py-2 transition">
+              كشف حساب
+            </Link>
             <Link href={`/sales/new?clientId=${client.id}`} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg px-4 py-2 transition">
               + فاتورة
             </Link>
@@ -212,7 +215,7 @@ export default async function ClientDetailPage({ params, searchParams }: { param
                 </div>
               ))}
             </div>
-            <Panel title={`الفواتير (${client.sales.length})`} action={<Link href={`/sales/new?clientId=${client.id}`} className="text-xs text-primary-700 hover:underline">+ فاتورة جديدة</Link>}>
+            <Panel title={`الفواتير (${client.sales.length})`} action={<span className="flex items-center gap-3"><Link href={`/print/statement/client/${client.id}`} target="_blank" className="text-xs text-primary-700 hover:underline">كشف حساب</Link><Link href={`/sales/new?clientId=${client.id}`} className="text-xs text-primary-700 hover:underline">+ فاتورة جديدة</Link></span>}>
               <SalesTable sales={client.sales} />
             </Panel>
             <Panel title={`عروض الأسعار (${client.quotations.length})`}>
