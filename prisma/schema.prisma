@@ -757,7 +757,9 @@ model Client {
   failedLoginCount     Int       @default(0)
   lockedUntil          DateTime? // قفل مؤقت بعد محاولات فاشلة
   lastPortalLoginAt    DateTime?
+  emailVerifiedAt      DateTime?
   portalAccessLogs     PortalAccessLog[]
+  portalOtps           PortalOtp[]
   createdAt DateTime   @default(now())
 
   cases Case[]
@@ -785,6 +787,24 @@ model PortalAccessLog {
   createdAt DateTime @default(now())
 
   @@index([clientId, createdAt])
+  @@schema("public")
+}
+
+// رموز التحقق لبوابة العميل (دخول / تفعيل / استعادة)
+model PortalOtp {
+  id         String    @id @default(cuid())
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  email      String // البريد المستهدف (يسمح بالتسجيل الذاتي قبل وجود سجل العميل)
+  purpose    String // LOGIN / ACTIVATE / RESET
+  channel    String // EMAIL / SMS
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, purpose, createdAt])
   @@schema("public")
 }
 
