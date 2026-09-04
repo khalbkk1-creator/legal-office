@@ -184,7 +184,7 @@ export default async function FinancePage() {
           <p className="text-gray-500 text-sm mt-1">مؤشرات الأداء المالي — مصدر البيانات: القيود المرحّلة</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/accounting?tab=statements" className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2">القوائم المالية</Link>
+          <Link href="/reports" className="text-xs bg-primary-700 hover:bg-primary-800 text-white rounded-lg px-3 py-2">التقارير المالية</Link>
           <Link href="/accounting?tab=aging" className="text-xs bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2">أعمار الديون</Link>
         </div>
       </div>
