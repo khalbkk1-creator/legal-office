@@ -22,7 +22,7 @@ export default async function PortalAuthShell({ title, subtitle, children }: { t
           {children}
         </div>
         <p className="text-center text-[11px] text-primary-200 mt-4">
-          <Link href="/portal/login" className="hover:text-white">دخول</Link> · <Link href="/portal/register" className="hover:text-white">إنشاء حساب</Link> · <Link href="/portal/forgot" className="hover:text-white">نسيت كلمة المرور</Link>
+          <Link href="/portal/login" className="hover:text-white">دخول</Link> · <Link href="/portal/register" className="hover:text-white">تفعيل حساب</Link> · <Link href="/portal/forgot" className="hover:text-white">نسيت كلمة المرور</Link>
         </p>
       </div>
     </div>

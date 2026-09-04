@@ -12,44 +12,28 @@ export async function POST(req: NextRequest) {
   const purpose = (body.purpose || "LOGIN") as OtpPurpose;
   if (!email || !/^\d{6}$/.test(code)) return NextResponse.json({ error: "أدخل الرمز المكوّن من 6 أرقام" }, { status: 400 });
 
-  let client = await prisma.client.findFirst({ where: { email } });
-  if (client?.portalDisabled) return NextResponse.json({ error: "الحساب معطّل" }, { status: 403 });
-  if (purpose !== "ACTIVATE" && !client) return NextResponse.json({ error: "الرمز غير صحيح" }, { status: 400 });
+  const client = await prisma.client.findFirst({ where: { email } });
+  if (!client || client.portalDisabled) return NextResponse.json({ error: "الرمز غير صحيح" }, { status: 400 });
 
-  const v = await verifyOtp(email, purpose, code, client?.id);
+  const v = await verifyOtp(client.id, purpose, code);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
 
+  const data: Record<string, unknown> = { emailVerifiedAt: new Date() };
   if (purpose === "ACTIVATE" || purpose === "RESET") {
     const password = body.password || "";
     if (password.length < MIN_PASSWORD_LENGTH || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
       return NextResponse.json({ error: `كلمة المرور ${MIN_PASSWORD_LENGTH} أحرف على الأقل وتحتوي حروفاً وأرقاماً` }, { status: 400 });
     }
-    const passwordHash = await bcrypt.hash(password, 10);
-    const name = typeof body.name === "string" ? body.name.trim() : "";
-    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-
-    if (!client) {
-      // تسجيل ذاتي جديد — البريد مُتحقق منه بالرمز
-      if (!name) return NextResponse.json({ error: "الاسم مطلوب" }, { status: 400 });
-      client = await prisma.client.create({ data: { name, email, phone: phone || null, passwordHash, emailVerifiedAt: new Date() } });
-      await logPortalAccess(client.id, "REGISTER", { detail: "تسجيل ذاتي عبر البوابة العامة" });
-    } else {
-      // تفعيل/استعادة لعميل موجود — لا نغيّر بياناته الأساسية، فقط كلمة المرور والجوال إن كان فارغاً
-      client = await prisma.client.update({
-        where: { id: client.id },
-        data: { passwordHash, emailVerifiedAt: new Date(), ...(purpose === "ACTIVATE" && !client.phone && phone ? { phone } : {}) },
-      });
-      await logPortalAccess(client.id, purpose === "ACTIVATE" ? "ACTIVATED" : "PASSWORD_RESET");
-    }
-  } else {
-    await prisma.client.update({ where: { id: client!.id }, data: { emailVerifiedAt: new Date() } });
-    await logPortalAccess(client!.id, "OTP_VERIFIED");
+    data.passwordHash = await bcrypt.hash(password, 10);
+    if (purpose === "ACTIVATE" && typeof body.name === "string" && body.name.trim() && !client.name) data.name = body.name.trim();
   }
-  await recordSuccessfulLogin(client!.id);
+  await prisma.client.update({ where: { id: client.id }, data });
+  await logPortalAccess(client.id, purpose === "LOGIN" ? "OTP_VERIFIED" : purpose === "ACTIVATE" ? "ACTIVATED" : "PASSWORD_RESET");
+  await recordSuccessfulLogin(client.id);
 
-  const accessToken = await ensureClientAccessToken(client!.id, client!.accessToken, client!.accessTokenExpiresAt);
-  const sessionToken = await createPortalSessionCookieValue(client!.id);
-  const res = NextResponse.json({ ok: true, id: client!.id, name: client!.name, token: accessToken });
+  const accessToken = await ensureClientAccessToken(client.id, client.accessToken, client.accessTokenExpiresAt);
+  const sessionToken = await createPortalSessionCookieValue(client.id);
+  const res = NextResponse.json({ ok: true, id: client.id, name: client.name, token: accessToken });
   const { name: cookieName, ...options } = portalCookieOptions();
   res.cookies.set(cookieName, sessionToken, options);
   return res;

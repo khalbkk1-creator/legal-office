@@ -67,7 +67,7 @@ export default function LoginFlow({ next }: { next?: string }) {
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
       <button type="submit" disabled={busy} className="w-full bg-primary-700 hover:bg-primary-800 text-white rounded-xl py-3 text-sm font-medium disabled:opacity-60">{busy ? "..." : "متابعة"}</button>
       <div className="flex items-center justify-between text-xs pt-1">
-        <Link href="/portal/register" className="text-primary-700 hover:underline">ليس لديك حساب؟ سجّل الآن</Link>
+        <Link href="/portal/register" className="text-primary-700 hover:underline">أول مرة؟ فعّل حسابك</Link>
         <Link href="/portal/forgot" className="text-gray-500 hover:underline">نسيت كلمة المرور</Link>
       </div>
     </form>

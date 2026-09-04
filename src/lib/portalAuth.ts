@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { encode, decode } from "next-auth/jwt";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
@@ -70,16 +71,24 @@ export async function getPortalClient() {
 }
 
 /**
- * الوصول برابط الدعوة: يتحقق من وجود الرمز، وأن البوابة غير معطّلة، وأن الرابط لم تنتهِ صلاحيته.
- * يُسجّل كل وصول ناجح. يُستخدم بدل prisma.client.findUnique({ where: { accessToken } }) في كل مسارات البوابة.
+ * الوصول لصفحات/واجهات البوابة بالرمز: الرمز وحده لا يكفي — يجب وجود جلسة دخول (كوكي موقّع)
+ * لنفس العميل. في وضع الصفحات يُحوّل لتسجيل الدخول؛ في وضع API يُرجع null.
  */
-export async function resolvePortalClientByToken(token: string | undefined, path?: string) {
-  if (!token || token.length < 16) return null;
+export async function resolvePortalClientByToken(token: string | undefined, path?: string, opts?: { mode?: "page" | "api" }) {
+  const mode = opts?.mode ?? "api";
+  const deny = () => {
+    if (mode === "page") redirect(`/portal/login${token ? `?next=${encodeURIComponent(`/portal/${token}`)}` : ""}`);
+    return null;
+  };
+  if (!token || token.length < 16) return deny();
   const client = await prisma.client.findUnique({ where: { accessToken: token } });
-  if (!client) return null;
-  if (client.portalDisabled) return null;
-  if (client.accessTokenExpiresAt && client.accessTokenExpiresAt < new Date()) return null;
-  await logPortalAccess(client.id, "LINK_ACCESS", { path });
+  if (!client || client.portalDisabled) return deny();
+  if (client.accessTokenExpiresAt && client.accessTokenExpiresAt < new Date()) return deny();
+
+  const sessionClient = await getPortalClient();
+  if (!sessionClient || sessionClient.id !== client.id) return deny();
+
+  await logPortalAccess(client.id, "PAGE_VIEW", { path });
   return client;
 }
 

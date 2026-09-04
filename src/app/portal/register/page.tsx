@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 
 export default function PortalActivatePage() {
   return (
-    <PortalAuthShell title="إنشاء حساب" subtitle="سجّل بياناتك وسيصلك رمز تحقق على بريدك لتأكيده وتعيين كلمة مرورك">
-      <OtpPasswordFlow purpose="ACTIVATE" submitLabel="إنشاء الحساب" />
+    <PortalAuthShell title="تفعيل حسابك" subtitle="أدخل بريدك المسجّل لدى المكتب، وسيصلك رمز تحقق لتعيين كلمة مرورك">
+      <OtpPasswordFlow purpose="ACTIVATE" submitLabel="تفعيل الحساب" />
     </PortalAuthShell>
   );
 }

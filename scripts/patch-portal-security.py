@@ -10,8 +10,12 @@ for f in files:
     except FileNotFoundError:
         continue
     if "resolvePortalClientByToken" in s:
+        if f.startswith("src/app/portal/") and '{ mode: "page" }' not in s:
+            s2 = s.replace("await resolvePortalClientByToken(params.token)", 'await resolvePortalClientByToken(params.token, undefined, { mode: "page" })')
+            open(f, "w", encoding="utf-8").write(s2); print("upgraded to page mode", f); changed += 1
         continue
-    n, count = pattern.subn("await resolvePortalClientByToken(params.token)", s)
+    repl = 'await resolvePortalClientByToken(params.token, undefined, { mode: "page" })' if f.startswith("src/app/portal/") else "await resolvePortalClientByToken(params.token)"
+    n, count = pattern.subn(repl, s)
     if count == 0:
         continue
     if 'from "@/lib/portalAuth"' not in n:

@@ -6,7 +6,7 @@ import ProfileForm from "./ProfileForm";
 export const dynamic = "force-dynamic";
 
 export default async function PortalProfilePage({ params }: { params: { token: string } }) {
-  const client = await resolvePortalClientByToken(params.token);
+  const client = await resolvePortalClientByToken(params.token, undefined, { mode: "page" });
   if (!client) notFound();
 
   return (

@@ -793,9 +793,8 @@ model PortalAccessLog {
 // رموز التحقق لبوابة العميل (دخول / تفعيل / استعادة)
 model PortalOtp {
   id         String    @id @default(cuid())
-  clientId   String?
-  client     Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  email      String // البريد المستهدف (يسمح بالتسجيل الذاتي قبل وجود سجل العميل)
+  clientId   String
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   purpose    String // LOGIN / ACTIVATE / RESET
   channel    String // EMAIL / SMS
   codeHash   String
@@ -804,7 +803,7 @@ model PortalOtp {
   consumedAt DateTime?
   createdAt  DateTime  @default(now())
 
-  @@index([email, purpose, createdAt])
+  @@index([clientId, purpose, createdAt])
   @@schema("public")
 }
 
